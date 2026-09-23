@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "stress:generator": "vitest run --config vitest.stress.config.ts"
   },
   "dependencies": {
     "decimal.js": "^10.6.0"
