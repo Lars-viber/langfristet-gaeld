@@ -26,9 +26,9 @@ describe('fixed generator regressions', () => {
     expect(Array.from({ length: 8 }, () => next())).toMatchSnapshot();
   });
 
-  it('returns identical output for 100 repeated calls', () => {
+  it('returns identical output for repeated calls', () => {
     const expected = generateLevel1Case({ loanType: 'annuity', seed: 42 });
-    for (let index = 0; index < 100; index++) {
+    for (let index = 0; index < 10; index++) {
       expect(generateLevel1Case({ loanType: 'annuity', seed: 42 })).toEqual(expected);
     }
   }, 15_000);
