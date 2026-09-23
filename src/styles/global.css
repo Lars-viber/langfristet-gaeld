@@ -1,0 +1,28 @@
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; background: var(--bg); color: var(--text); font-family: "Segoe UI", "Aptos", Arial, sans-serif; line-height: 1.55; }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+h1, h2, h3, p { margin-top: 0; }
+h1, h2, h3 { line-height: 1.14; }
+p { margin-bottom: 0; }
+a { color: inherit; }
+::selection { background: var(--accent-soft); color: var(--primary-strong); }
+.skip-link { position: absolute; top: -4rem; left: 1rem; z-index: 10; padding: .7rem 1rem; border-radius: var(--radius-sm); background: var(--accent); color: var(--primary-strong); }
+.skip-link:focus { top: 1rem; }
+.eyebrow { margin-bottom: .6rem; color: var(--primary); font-size: .77rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: .65rem; min-height: 46px; padding: .66rem 1.05rem; border: 1px solid transparent; border-radius: var(--radius-sm); font-weight: 700; text-align: center; transition: background .16s ease, transform .16s ease, box-shadow .16s ease; }
+.button:not(:disabled):hover { transform: translateY(-1px); }
+.button-primary { background: var(--primary); color: var(--surface); box-shadow: 0 5px 12px rgb(23 75 69 / 14%); }
+.button-primary:not(:disabled):hover { background: var(--primary-strong); }
+.button-primary:disabled { background: var(--border); color: var(--text-muted); box-shadow: none; }
+.button-secondary { border-color: var(--border); background: var(--surface); color: var(--primary); }
+.button-secondary:not(:disabled):hover { background: var(--surface-muted); }
+.button-text { background: transparent; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.button-text:not(:disabled):hover { background: var(--surface-muted); }
+.card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+.table-scroll { max-width: 100%; overflow-x: auto; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
