@@ -31,7 +31,7 @@ export function AppShell({ state, onAction, onReset, onNewCase }: AppShellProps)
       {state.sessionStatus === 'completed' && (
         <div className="completed-banner" role="status"><span aria-hidden="true">✓</span> Niveau 1 gennemført</div>
       )}
-      <StepShell state={state} />
+      <StepShell state={state} onAction={onAction} />
     </main>
   );
 }

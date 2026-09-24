@@ -1,8 +1,10 @@
 import { STEP_COPY } from '../app/labels';
 import { canEditStep } from '../student';
-import type { StudentState } from '../student';
+import type { StudentAction, StudentState } from '../student';
+import { InitialRecognitionStep } from './InitialRecognitionStep';
+import { ProceedsStep } from './ProceedsStep';
 
-export function StepShell({ state }: { state: StudentState }) {
+export function StepShell({ state, onAction }: { state: StudentState; onAction(action: StudentAction): void }) {
   const step = state.viewingStep;
   const copy = STEP_COPY[step];
   const readOnly = !canEditStep(state, step);
@@ -17,13 +19,15 @@ export function StepShell({ state }: { state: StudentState }) {
         </div>
         <span className={`step-mode ${readOnly ? 'is-readonly' : ''}`}>{readOnly ? 'Kun visning' : 'Aktuelt trin'}</span>
       </div>
-      <div className="work-area table-scroll" role="group" aria-label={`Arbejdsområde for ${copy.title}`}>
-        <div className="work-area-symbol" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
-        <div>
-          <h3>Arbejdsområde</h3>
-          <p>Her får du plads til beregninger og bogføring.</p>
-        </div>
-      </div>
+      {step === 'proceeds' ? <ProceedsStep state={state} onAction={onAction} readOnly={readOnly} />
+        : step === 'initialRecognition' ? <InitialRecognitionStep state={state} onAction={onAction} readOnly={readOnly} />
+        : <div className="work-area table-scroll" role="group" aria-label={`Arbejdsområde for ${copy.title}`}>
+          <div className="work-area-symbol" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
+          <div>
+            <h3>Arbejdsområde</h3>
+            <p>Her får du plads til beregninger og bogføring.</p>
+          </div>
+        </div>}
     </section>
   );
 }
