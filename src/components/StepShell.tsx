@@ -3,6 +3,8 @@ import { canEditStep } from '../student';
 import type { StudentAction, StudentState } from '../student';
 import { InitialRecognitionStep } from './InitialRecognitionStep';
 import { ProceedsStep } from './ProceedsStep';
+import { ContractScheduleStep } from './ContractScheduleStep';
+import { EffectiveInterestStep } from './EffectiveInterestStep';
 
 export function StepShell({ state, onAction }: { state: StudentState; onAction(action: StudentAction): void }) {
   const step = state.viewingStep;
@@ -21,6 +23,8 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
       </div>
       {step === 'proceeds' ? <ProceedsStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'initialRecognition' ? <InitialRecognitionStep state={state} onAction={onAction} readOnly={readOnly} />
+        : step === 'contractSchedule' ? <ContractScheduleStep state={state} onAction={onAction} readOnly={readOnly} />
+        : step === 'effectiveInterest' ? <EffectiveInterestStep state={state} onAction={onAction} readOnly={readOnly} />
         : <div className="work-area table-scroll" role="group" aria-label={`Arbejdsområde for ${copy.title}`}>
           <div className="work-area-symbol" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
           <div>

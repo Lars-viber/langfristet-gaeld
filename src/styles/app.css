@@ -194,3 +194,52 @@
   .posting-amount { grid-column: 2; }
   .posting-actions .button { flex: 1 1 100%; }
 }
+
+/* L8B: the schedule and cash-flow tables retain their column order on narrow screens. */
+.schedule-work, .interest-work { display: grid; gap: 1.25rem; }
+.prerequisite-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr)); gap: 1.1rem; margin-top: 1.25rem; }
+.calculation-action { margin-top: 1.25rem; padding: 1rem; border-radius: var(--radius-sm); background: var(--accent-soft); }
+.calculation-action p { color: var(--primary-strong); }
+.finance-table { width: 100%; min-width: 990px; border-collapse: separate; border-spacing: 0; margin-top: 1.1rem; font-size: .86rem; }
+.cashflow-table { min-width: 650px; }
+.finance-table th, .finance-table td { min-width: 130px; padding: .75rem .6rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.finance-table th:first-child, .finance-table td:first-child { min-width: 74px; }
+.finance-table th:nth-child(2), .finance-table td:nth-child(2) { min-width: 108px; }
+.finance-table thead th { position: sticky; top: 0; background: var(--surface-muted); color: var(--primary-strong); font-size: .78rem; }
+.finance-table tbody th { color: var(--primary-strong); }
+.finance-table .row-active { background: var(--accent-soft); }
+.finance-table .row-approved { background: var(--success-soft); }
+.finance-table .row-appCalculated { background: var(--surface-muted); }
+.finance-table .row-locked { color: var(--text-muted); }
+.table-field { position: relative; min-width: 125px; }
+.table-field input { width: 100%; min-height: 40px; padding: .45rem .55rem; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); font: .84rem Consolas, monospace; }
+.table-field input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.table-field input[readonly] { border-color: var(--success); background: var(--success-soft); }
+.table-field input[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); }
+.table-field .validation-message { margin-top: .35rem; font-size: .72rem; line-height: 1.25; }
+.field-approved { display: block; margin-top: .2rem; color: var(--success); font-size: .72rem; font-weight: 800; }
+.calculated-value { color: var(--primary-strong); font-weight: 700; font-variant-numeric: tabular-nums; }
+.empty-value { color: var(--text-muted); }
+.row-action { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: .9rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.row-action span { color: var(--text-muted); font-size: .86rem; }
+.calculated-note { margin-top: 1rem; color: var(--success); font-weight: 700; }
+.sign-choice { display: flex; gap: .35rem; margin: 0; padding: 0; border: 0; }
+.sign-choice label { cursor: pointer; }
+.sign-choice input { position: absolute; opacity: 0; }
+.sign-choice span { display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); font-size: 1.2rem; font-weight: 800; }
+.sign-choice input:checked + span { border-color: var(--primary); background: var(--primary); color: var(--surface); }
+.sign-choice input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.cashflow-sign { font-size: 1.25rem; font-weight: 800; }
+.effective-rate { color: var(--primary-strong); font-family: Georgia, serif; font-size: clamp(2rem, 5vw, 3rem); }
+.effective-rate small { display: block; color: var(--text-muted); font: .85rem "Segoe UI", Arial, sans-serif; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 640px) {
+  .row-action { align-items: stretch; flex-direction: column; }
+  .row-action .button { width: 100%; }
+  .schedule-work .table-scroll, .interest-work .table-scroll { margin-right: -.6rem; padding-right: .6rem; }
+}
+.schedule-work, .interest-work { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.schedule-work .work-card, .interest-work .work-card, .schedule-work .table-scroll, .interest-work .table-scroll { width: 100%; min-width: 0; }
+@media (max-width: 620px) {
+  .workspace-actions { width: 100%; }
+}
