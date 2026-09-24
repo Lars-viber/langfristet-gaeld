@@ -267,3 +267,55 @@
   .amortization-work .table-scroll { margin-right: -.6rem; padding-right: .6rem; }
   .bookkeeping-reference dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* L8D: year-end classification, final balances, and explicit completion. */
+.classification-work, .completion-work { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; min-width: 0; }
+.classification-work .work-card, .completion-work .work-card { width: 100%; max-width: none; min-width: 0; }
+.classification-fields, .balance-list, .final-checks { display: grid; gap: 1.1rem; margin-top: 1.3rem; }
+.classification-entry, .upcoming-repayments, .classification-reconcile { padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-muted); }
+.classification-entry > label, .repayment-row > label, .balance-answer > label { display: block; margin-bottom: .5rem; font-weight: 700; }
+.classification-entry input, .repayment-row input, .balance-answer input, .balance-answer select { min-height: 46px; min-width: 0; padding: .6rem .75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; }
+.classification-entry input, .repayment-row input { flex: 1 1 240px; font-family: Consolas, monospace; }
+.classification-entry input[readonly], .repayment-row input[readonly], .balance-answer input[readonly] { border-color: var(--success); background: var(--success-soft); }
+.classification-entry input[aria-invalid="true"], .repayment-row input[aria-invalid="true"], .balance-answer input[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); }
+.upcoming-repayments h4 { margin: 0 0 .6rem; color: var(--primary-strong); }
+.repayment-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(0, 2fr); gap: .7rem 1rem; align-items: center; padding: .8rem 0; border-top: 1px solid var(--border); }
+.repayment-row > label { margin: 0; }
+.repayment-row small { display: block; color: var(--text-muted); font-size: .75rem; font-weight: 500; }
+.repayment-row .validation-message { grid-column: 2; margin: 0; }
+.repayment-controls, .balance-controls { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.classification-reconcile strong { color: var(--primary-strong); }
+.classification-reconcile p { margin: .3rem 0 .8rem; }
+.answer-options { display: flex; gap: 1.2rem; margin: 1rem 0; }
+.answer-options label { display: inline-flex; align-items: center; gap: .45rem; font-weight: 700; }
+.balance-account { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.balance-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1rem; background: var(--surface-muted); }
+.balance-heading strong { color: var(--primary-strong); }
+.balance-heading span:not(.balance-none) { display: block; color: var(--text-muted); font-size: .75rem; }
+.balance-none { color: var(--text-muted); font-weight: 800; }
+.account-movements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .3rem 1rem; padding: 1rem; }
+.account-movements > div { display: flex; justify-content: space-between; gap: .6rem; padding: .35rem .1rem; border-bottom: 1px solid var(--border); font-size: .8rem; }
+.account-movements > div span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.balance-answer { padding: 1rem; border-top: 2px solid var(--primary); }
+.balance-answer input { flex: 1 1 250px; font-family: Consolas, monospace; }
+.balance-side { display: grid; gap: .2rem; color: var(--text-muted); font-size: .75rem; font-weight: 700; }
+.balance-side select { min-width: 105px; }
+.final-check { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.final-check > div { flex: 1; }
+.final-check strong { color: var(--primary-strong); }
+.final-check p { margin-top: .2rem; color: var(--text-muted); font-size: .84rem; }
+.check-letter { display: grid; flex: 0 0 36px; height: 36px; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--primary-strong); font-weight: 800; }
+.checks-count { margin-top: 1.2rem; color: var(--primary-strong); font-weight: 800; }
+.finish-action { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: 1rem; border-radius: var(--radius-sm); background: var(--success-soft); }
+.completed-summary { padding: clamp(1.3rem, 3vw, 2rem); }
+.summary-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.completed-summary h2 { color: var(--primary-strong); font-family: Georgia, serif; font-size: clamp(1.8rem, 3vw, 2.5rem); font-weight: 500; }
+.completed-summary dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.completed-summary dt { color: var(--text-muted); font-size: .75rem; font-weight: 700; }
+.completed-summary dd { margin: .2rem 0 0; color: var(--primary-strong); font-weight: 800; }
+@media (max-width: 640px) {
+  .repayment-row, .account-movements { grid-template-columns: minmax(0, 1fr); }
+  .repayment-row .validation-message { grid-column: 1; }
+  .final-check, .finish-action { align-items: stretch; flex-direction: column; }
+  .balance-controls .button, .repayment-controls .button { flex: 1 1 100%; }
+}

@@ -7,6 +7,8 @@ import { ContractScheduleStep } from './ContractScheduleStep';
 import { EffectiveInterestStep } from './EffectiveInterestStep';
 import { AmortizationStep } from './AmortizationStep';
 import { BookkeepingStep } from './BookkeepingStep';
+import { ClassificationStep } from './ClassificationStep';
+import { CompletionStep } from './CompletionStep';
 
 export function StepShell({ state, onAction }: { state: StudentState; onAction(action: StudentAction): void }) {
   const step = state.viewingStep;
@@ -29,6 +31,8 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
         : step === 'effectiveInterest' ? <EffectiveInterestStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'amortizedCost' ? <AmortizationStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'yearBookkeeping' ? <BookkeepingStep state={state} onAction={onAction} readOnly={readOnly} />
+        : step === 'classification' ? <ClassificationStep state={state} onAction={onAction} readOnly={readOnly} />
+        : step === 'completion' ? <CompletionStep state={state} onAction={onAction} readOnly={readOnly} />
         : <div className="work-area table-scroll" role="group" aria-label={`Arbejdsområde for ${copy.title}`}>
           <div className="work-area-symbol" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
           <div>
