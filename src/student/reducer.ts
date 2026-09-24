@@ -8,7 +8,7 @@ import {
 } from '../validation';
 import type { StudentPostingLine, ValidationResult } from '../validation';
 import {
-  amortizationSubrowStatus, canEditStep, canViewStep, cashFlowRowStatus,
+  amortizationSubrowStatus, canCalculateAnnuityPayment, canEditStep, canViewStep, cashFlowRowStatus,
   classificationStage, manualTerms, prerequisitesApproved, scheduleRowStatus,
 } from './selectors';
 import { STUDENT_STATE_VERSION, STUDENT_STEPS } from './types';
@@ -47,7 +47,7 @@ export function createStudentState(generatedCase: GeneratedLevel1Case): StudentS
     schemaVersion: STUDENT_STATE_VERSION, generatedCase, caseResult: result,
     currentStep: 'proceeds', viewingStep: 'proceeds', completedSteps: [], sessionStatus: 'active',
     proceeds: {}, initialRecognition: block(),
-    schedule: { prerequisites: {}, rows: {}, approvedTerms: [], remainingCalculated: false },
+    schedule: { prerequisites: {}, annuityPaymentCalculated: false, rows: {}, approvedTerms: [], remainingCalculated: false },
     effectiveInterest: { rows: {}, approvedTerms: [], remainingCalculated: false, rateCalculated: false },
     amortization: { terms: { 1: amortizationTerm(), 2: amortizationTerm() }, remainingCalculated: false },
     bookkeeping,
@@ -171,11 +171,15 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       const next = copy(state); const target = next.schedule.prerequisites[action.field] ??= field();
       const result = calculatedResult(state);
       const validation = action.field === 'termCount'
-        ? validateAmount(target.raw, { expected: new D(result.contract.rows.length), expectedScale: 0 })
+        ? validateManualCalculation(target.raw, { expected: new D(result.contract.rows.length), expectedScale: 10, requirePositive: true })
         : action.field === 'termRate'
-          ? validateAmount(target.raw, { expected: result.contract.termRate, expectedScale: 10 })
+          ? validateManualCalculation(target.raw, { expected: result.contract.termRate, expectedScale: 10, requirePositive: true })
           : validateManualCalculation(target.raw, { expected: result.contract.standardPayment!, requirePositive: true });
       storeCheck(target, validation); return next;
+    }
+    case 'calculateAnnuityPayment': {
+      if (!canCalculateAnnuityPayment(state)) return state;
+      const next = copy(state); next.schedule.annuityPaymentCalculated = true; return next;
     }
     case 'editScheduleField': {
       if (!allowed(state, 'contractSchedule') || scheduleRowStatus(state, action.term) !== 'active' || !scheduleFields(state).includes(action.field) || state.schedule.rows[action.term]?.[action.field]?.approved) return state;

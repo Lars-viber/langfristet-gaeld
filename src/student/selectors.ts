@@ -21,7 +21,9 @@ export function scheduleRowStatus(state: StudentState, term: number): RowStatus 
   if (!manual.includes(term)) return state.schedule.remainingCalculated ? 'appCalculated' : 'locked';
   if (state.schedule.approvedTerms.includes(term)) return 'approved';
   const next = manual.find((candidate) => !state.schedule.approvedTerms.includes(candidate));
-  return state.currentStep === 'contractSchedule' && prerequisitesApproved(state) && term === next ? 'active' : 'locked';
+  return state.currentStep === 'contractSchedule' && prerequisitesApproved(state)
+    && (state.generatedCase.loanType !== 'annuity' || state.schedule.annuityPaymentCalculated)
+    && term === next ? 'active' : 'locked';
 }
 export function cashFlowRowStatus(state: StudentState, term: number): RowStatus {
   const count = state.generatedCase.caseInput.years * state.generatedCase.caseInput.paymentsPerYear;
@@ -47,6 +49,11 @@ export function prerequisitesApproved(state: StudentState): boolean {
   const required = state.generatedCase.loanType === 'serial' ? ['termCount', 'termRate', 'fixedRepayment'] : ['termCount', 'termRate'];
   return required.every((field) => state.schedule.prerequisites[field as keyof typeof state.schedule.prerequisites]?.approved);
 }
+export function canCalculateAnnuityPayment(state: StudentState): boolean {
+  return state.generatedCase.loanType === 'annuity' && canEditStep(state, 'contractSchedule')
+    && prerequisitesApproved(state) && !state.schedule.annuityPaymentCalculated
+    && state.caseResult.contract.standardPayment !== null;
+}
 export function classificationStage(state: StudentState): 'carrying' | 'upcoming' | 'shortTerm' | 'longTerm' | 'reconcile' | 'reclassification' | 'noReclassification' | 'done' {
   const c = state.classification;
   if (!c.fields.carryingAmount?.approved) return 'carrying';
@@ -68,6 +75,8 @@ export function deriveStudentView(state: StudentState) {
     sessionStatus: state.sessionStatus,
     steps: STUDENT_STEPS.map((step) => ({ step, status: stepStatus(state, step), canView: canViewStep(state, step), canEdit: canEditStep(state, step) })),
     scheduleRows: activeModel.contract.rows.map((row) => ({ term: row.term, status: scheduleRowStatus(state, row.term) })),
+    annuityPaymentCalculated: state.schedule.annuityPaymentCalculated,
+    canCalculateAnnuityPayment: canCalculateAnnuityPayment(state),
     cashFlowRows: activeModel.cashFlows.map((row) => ({ term: row.term, status: cashFlowRowStatus(state, row.term) })),
     activeAmortizationTerm,
     activeAmortizationSubtable: activeAmortizationTerm === null ? null : state.amortization.terms[activeAmortizationTerm]?.incomeApproved ? 'balance' : 'income',

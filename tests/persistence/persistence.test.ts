@@ -39,13 +39,33 @@ describe('L6 serialization', () => {
     const state: StudentState = {
       ...base, currentStep: 'effectiveInterest', viewingStep: 'effectiveInterest',
       completedSteps: ['proceeds', 'initialRecognition', 'contractSchedule'],
-      schedule: { prerequisites: { termCount: { raw: '4', approved: true, errorCode: null } },
+      schedule: { prerequisites: { termCount: { raw: '4', approved: true, errorCode: null } }, annuityPaymentCalculated: true,
         rows: { 1: { openingPrincipal: { raw: '=7.000.000+0', approved: true, errorCode: null } } },
         approvedTerms: [1, 2], remainingCalculated: true },
     };
     const result = restored(state);
     expect(result.schedule).toEqual(state.schedule);
     expect(applyStudentAction(result, { type: 'editScheduleField', term: 1, field: 'openingPrincipal', raw: '=1+1' })).toBe(result);
+  });
+
+  it('roundtrips the annuity payment action and restores older schedule snapshots', () => {
+    const base = fresh();
+    const ready: StudentState = {
+      ...base, currentStep: 'contractSchedule', viewingStep: 'contractSchedule',
+      completedSteps: ['proceeds', 'initialRecognition'],
+      schedule: { ...base.schedule, prerequisites: {
+        termCount: { raw: '=4*1', approved: true, errorCode: null },
+        termRate: { raw: '=8%/1', approved: true, errorCode: null },
+      } },
+    };
+    const calculated = applyStudentAction(ready, { type: 'calculateAnnuityPayment' });
+    expect(calculated.schedule.annuityPaymentCalculated).toBe(true);
+    expect(restored(calculated).schedule.annuityPaymentCalculated).toBe(true);
+    const older = dto({ ...calculated, schedule: { ...calculated.schedule, approvedTerms: [1] } });
+    delete older.studentState.schedule.annuityPaymentCalculated;
+    const result = deserializeStudentSession(older);
+    expect(result.status).toBe('restored');
+    if (result.status === 'restored') expect(result.state.schedule.annuityPaymentCalculated).toBe(true);
   });
 
   it('keeps original bookkeeping lines in order, including intermediate postings', () => {

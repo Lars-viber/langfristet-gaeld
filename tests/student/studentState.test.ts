@@ -45,14 +45,15 @@ function approveInitial(state: StudentState): StudentState {
 function approveSchedule(state: StudentState): StudentState {
   const model = calculateLoan(state.generatedCase.caseInput);
   const prerequisites = [
-    ['termCount', String(model.contract.rows.length)],
-    ['termRate', dk(model.contract.termRate.toString())],
+    ['termCount', `=${state.generatedCase.caseInput.years}*${state.generatedCase.caseInput.paymentsPerYear}`],
+    ['termRate', `=${dk(state.generatedCase.caseInput.nominalAnnualRate)}/${state.generatedCase.caseInput.paymentsPerYear}`],
     ...(state.generatedCase.loanType === 'serial' ? [['fixedRepayment', formula(model.contract.standardPayment!)]] : []),
   ] as Array<['termCount' | 'termRate' | 'fixedRepayment', string]>;
   for (const [field, raw] of prerequisites) {
     state = take(state, { type: 'editSchedulePrerequisite', field, raw });
     state = take(state, { type: 'checkSchedulePrerequisite', field });
   }
+  if (state.generatedCase.loanType === 'annuity') state = take(state, { type: 'calculateAnnuityPayment' });
   const count = model.contract.rows.length;
   const terms = state.generatedCase.loanType === 'bullet' ? [1, 2, count] : [1, 2];
   for (const term of terms) {
@@ -227,12 +228,72 @@ describe('L5 student progression', () => {
     expect(scheduleRowStatus(state, 1)).toBe('locked');
     expect(take(state, { type: 'editScheduleField', term: 1, field: 'nominalInterest', raw: '=1+1' })).toBe(state);
   });
-  it('locks correct fields within an active row while wrong fields remain editable', () => {
+  it('rejects literal term counts and accepts an equivalent manual formula', () => {
     let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
-    for (const [field, raw] of [['termCount', '4'], ['termRate', '0,08']] as const) {
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termCount', raw: '4' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termCount' });
+    expect(state.schedule.prerequisites.termCount).toMatchObject({ approved: false, errorCode: 'MISSING_EQUALS' });
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termCount', raw: '=4' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termCount' });
+    expect(state.schedule.prerequisites.termCount).toMatchObject({ approved: false, errorCode: 'NO_ACTUAL_OPERATION' });
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termCount', raw: '=3,6+0' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termCount' });
+    expect(state.schedule.prerequisites.termCount).toMatchObject({ approved: false, errorCode: 'WRONG_RESULT' });
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termCount', raw: '=8/2' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termCount' });
+    expect(state.schedule.prerequisites.termCount).toMatchObject({ approved: true, errorCode: null });
+  });
+  it('rejects literal term rates and accepts an equivalent manual formula', () => {
+    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termRate', raw: '0,08' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termRate' });
+    expect(state.schedule.prerequisites.termRate).toMatchObject({ approved: false, errorCode: 'MISSING_EQUALS' });
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termRate', raw: '=0,08' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termRate' });
+    expect(state.schedule.prerequisites.termRate).toMatchObject({ approved: false, errorCode: 'NO_ACTUAL_OPERATION' });
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termRate', raw: '=16%/2' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termRate' });
+    expect(state.schedule.prerequisites.termRate).toMatchObject({ approved: true, errorCode: null });
+  });
+  it('blocks annuity payment calculation before prerequisites and on other loan types', () => {
+    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    expect(take(state, { type: 'calculateAnnuityPayment' })).toBe(state);
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termCount', raw: '=4*1' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termCount' });
+    expect(take(state, { type: 'calculateAnnuityPayment' })).toBe(state);
+    const serial = approveInitial(approveProceeds(createStudentState(generated(r3))));
+    const bullet = approveInitial(approveProceeds(createStudentState(generated(r6))));
+    expect(take(serial, { type: 'calculateAnnuityPayment' })).toBe(serial);
+    expect(take(bullet, { type: 'calculateAnnuityPayment' })).toBe(bullet);
+  });
+  it('opens annuity row one only after the immutable payment action', () => {
+    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    for (const [field, raw] of [['termCount', '=4*1'], ['termRate', '=8%/1']] as const) {
       state = take(state, { type: 'editSchedulePrerequisite', field, raw });
       state = take(state, { type: 'checkSchedulePrerequisite', field });
     }
+    expect(scheduleRowStatus(state, 1)).toBe('locked');
+    expect(deriveStudentView(state).canCalculateAnnuityPayment).toBe(true);
+    const before = state;
+    state = take(state, { type: 'calculateAnnuityPayment' });
+    expect(before.schedule.annuityPaymentCalculated).toBe(false);
+    expect(state.schedule.annuityPaymentCalculated).toBe(true);
+    expect(state.caseResult.contract.standardPayment).toBe(before.caseResult.contract.standardPayment);
+    expect(deriveStudentView(state).annuityPaymentCalculated).toBe(true);
+    expect(scheduleRowStatus(state, 1)).toBe('active');
+    expect(take(state, { type: 'calculateAnnuityPayment' })).toBe(state);
+    const historical = { ...before, viewingStep: 'proceeds' as const };
+    expect(take(historical, { type: 'calculateAnnuityPayment' })).toBe(historical);
+    const completed = { ...before, sessionStatus: 'completed' as const };
+    expect(take(completed, { type: 'calculateAnnuityPayment' })).toBe(completed);
+  });
+  it('locks correct fields within an active row while wrong fields remain editable', () => {
+    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    for (const [field, raw] of [['termCount', '=4*1'], ['termRate', '=8%/1']] as const) {
+      state = take(state, { type: 'editSchedulePrerequisite', field, raw });
+      state = take(state, { type: 'checkSchedulePrerequisite', field });
+    }
+    state = take(state, { type: 'calculateAnnuityPayment' });
     state = take(state, { type: 'editScheduleField', term: 1, field: 'openingPrincipal', raw: '=7.000.000+0' });
     state = take(state, { type: 'editScheduleField', term: 1, field: 'nominalInterest', raw: '=1+1' });
     state = take(state, { type: 'checkScheduleRow', term: 1 });

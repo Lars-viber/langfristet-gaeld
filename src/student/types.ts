@@ -60,6 +60,7 @@ export interface StudentState {
   initialRecognition: PostingBlockState;
   schedule: {
     prerequisites: Partial<Record<SchedulePrerequisite, FieldState>>;
+    annuityPaymentCalculated: boolean;
     rows: Record<number, Partial<Record<ScheduleField, FieldState>>>;
     approvedTerms: number[];
     remainingCalculated: boolean;
@@ -96,6 +97,7 @@ export type StudentAction =
   | { type: 'checkInitialRecognition' }
   | { type: 'editSchedulePrerequisite'; field: SchedulePrerequisite; raw: string }
   | { type: 'checkSchedulePrerequisite'; field: SchedulePrerequisite }
+  | { type: 'calculateAnnuityPayment' }
   | { type: 'editScheduleField'; term: number; field: ScheduleField; raw: string }
   | { type: 'checkScheduleRow'; term: number }
   | { type: 'calculateRemainingSchedule' }

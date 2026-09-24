@@ -128,16 +128,24 @@ const amortizationTerm = object({
   incomeApproved: bool, balanceApproved: bool, approved: bool,
 });
 const finalBalance = object({ raw: str, approved: bool, errorCode, side: nullable(side) });
+const scheduleState: Reader = (value) => {
+  if (!isObject(value)) return fail();
+  // Older L5 sessions did not store the explicit YDELSE action.
+  const compatible = Object.hasOwn(value, 'annuityPaymentCalculated')
+    ? value : { ...value, annuityPaymentCalculated: false };
+  return object({
+    prerequisites: partial(['termCount', 'termRate', 'fixedRepayment'], field),
+    annuityPaymentCalculated: bool,
+    rows: terms(partial(['openingPrincipal', 'payment', 'nominalInterest', 'principalRepayment', 'closingPrincipal'], field)),
+    approvedTerms: array(integer(1, 20)), remainingCalculated: bool,
+  })(compatible);
+};
 const studentState = object({
   schemaVersion: literal(STUDENT_STATE_VERSION), caseResult, currentStep: step,
   viewingStep: step, completedSteps: array(step), sessionStatus: literal('active', 'completed'),
   proceeds: partial(['variableCost', 'marketValue', 'brokerage', 'proceeds'], field),
   initialRecognition: block,
-  schedule: object({
-    prerequisites: partial(['termCount', 'termRate', 'fixedRepayment'], field),
-    rows: terms(partial(['openingPrincipal', 'payment', 'nominalInterest', 'principalRepayment', 'closingPrincipal'], field)),
-    approvedTerms: array(integer(1, 20)), remainingCalculated: bool,
-  }),
+  schedule: scheduleState,
   effectiveInterest: object({ rows: terms(cashFlowInput), approvedTerms: array(integer(0, 20)), remainingCalculated: bool, rateCalculated: bool }),
   amortization: object({ terms: terms(amortizationTerm), remainingCalculated: bool }),
   bookkeeping: terms(object({ payment: block, amortization: block })),
@@ -172,6 +180,12 @@ export function deserializeStudentSession(input: unknown): RestoreResult {
     if (inputCase.loanType !== snapshot.loanType) return fail();
     // Stored snapshots remain authoritative across generator releases. Never regenerate here.
     if (JSON.stringify(inputCase) !== JSON.stringify((stored.caseResult as Record<string, unknown>).input)) return fail();
+    const savedSchedule = (input.studentState as Record<string, unknown>).schedule as Record<string, unknown>;
+    if (!Object.hasOwn(savedSchedule, 'annuityPaymentCalculated')) {
+      const schedule = stored.schedule as StudentState['schedule'];
+      schedule.annuityPaymentCalculated = snapshot.loanType === 'annuity'
+        && (schedule.approvedTerms.length > 0 || schedule.remainingCalculated);
+    }
     return { status: 'restored', state: { ...stored, generatedCase: snapshot } as unknown as StudentState };
   } catch (error) {
     return { status: 'error', code: error instanceof PersistenceFault ? error.code : 'INVALID_SESSION' };
