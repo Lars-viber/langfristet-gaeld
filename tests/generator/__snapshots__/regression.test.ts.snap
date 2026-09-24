@@ -1,0 +1,509 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`fixed generator regressions > 'annuity' seed +0 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "150000",
+      "variableCostRate": "0.01",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "annuity",
+    "nominalAnnualRate": "0.08",
+    "nominalPrincipal": "10000000",
+    "openingBankBalance": "500000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "annuity",
+  "seed": 0,
+}
+`;
+
+exports[`fixed generator regressions > 'annuity' seed 1 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.01",
+      "fixedCost": "150000",
+      "issuePrice": "96",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "annuity",
+    "nominalAnnualRate": "0.05",
+    "nominalPrincipal": "11000000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 4,
+    "years": 5,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "annuity",
+  "seed": 1,
+}
+`;
+
+exports[`fixed generator regressions > 'annuity' seed 2 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.005",
+      "fixedCost": "150000",
+      "issuePrice": "97",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-07-01",
+    "loanType": "annuity",
+    "nominalAnnualRate": "0.09",
+    "nominalPrincipal": "11500000",
+    "openingBankBalance": "1250000",
+    "paymentsPerYear": 4,
+    "years": 5,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "annuity",
+  "seed": 2,
+}
+`;
+
+exports[`fixed generator regressions > 'annuity' seed 42 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "150000",
+      "variableCostRate": "0.02",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "annuity",
+    "nominalAnnualRate": "0.10",
+    "nominalPrincipal": "11500000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 4,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "annuity",
+  "seed": 42,
+}
+`;
+
+exports[`fixed generator regressions > 'annuity' seed 2026 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.01",
+      "fixedCost": "150000",
+      "issuePrice": "96",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "annuity",
+    "nominalAnnualRate": "0.05",
+    "nominalPrincipal": "9500000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "annuity",
+  "seed": 2026,
+}
+`;
+
+exports[`fixed generator regressions > 'annuity' seed 123456789 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "200000",
+      "variableCostRate": "0.02",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "annuity",
+    "nominalAnnualRate": "0.04",
+    "nominalPrincipal": "10000000",
+    "openingBankBalance": "500000",
+    "paymentsPerYear": 2,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "annuity",
+  "seed": 123456789,
+}
+`;
+
+exports[`fixed generator regressions > 'annuity' seed 4294967295 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.015",
+      "fixedCost": "150000",
+      "issuePrice": "97",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "annuity",
+    "nominalAnnualRate": "0.10",
+    "nominalPrincipal": "10500000",
+    "openingBankBalance": "1250000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "annuity",
+  "seed": 4294967295,
+}
+`;
+
+exports[`fixed generator regressions > 'bullet' seed +0 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "150000",
+      "variableCostRate": "0.01",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "bullet",
+    "nominalAnnualRate": "0.08",
+    "nominalPrincipal": "10000000",
+    "openingBankBalance": "500000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "bullet",
+  "seed": 0,
+}
+`;
+
+exports[`fixed generator regressions > 'bullet' seed 1 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.01",
+      "fixedCost": "150000",
+      "issuePrice": "96",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "bullet",
+    "nominalAnnualRate": "0.05",
+    "nominalPrincipal": "11000000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 4,
+    "years": 5,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "bullet",
+  "seed": 1,
+}
+`;
+
+exports[`fixed generator regressions > 'bullet' seed 2 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.005",
+      "fixedCost": "150000",
+      "issuePrice": "97",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-07-01",
+    "loanType": "bullet",
+    "nominalAnnualRate": "0.09",
+    "nominalPrincipal": "11500000",
+    "openingBankBalance": "1250000",
+    "paymentsPerYear": 4,
+    "years": 5,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "bullet",
+  "seed": 2,
+}
+`;
+
+exports[`fixed generator regressions > 'bullet' seed 42 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "150000",
+      "variableCostRate": "0.02",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "bullet",
+    "nominalAnnualRate": "0.10",
+    "nominalPrincipal": "11500000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 4,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "bullet",
+  "seed": 42,
+}
+`;
+
+exports[`fixed generator regressions > 'bullet' seed 2026 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.01",
+      "fixedCost": "150000",
+      "issuePrice": "96",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "bullet",
+    "nominalAnnualRate": "0.05",
+    "nominalPrincipal": "9500000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "bullet",
+  "seed": 2026,
+}
+`;
+
+exports[`fixed generator regressions > 'bullet' seed 123456789 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "200000",
+      "variableCostRate": "0.02",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "bullet",
+    "nominalAnnualRate": "0.04",
+    "nominalPrincipal": "10000000",
+    "openingBankBalance": "500000",
+    "paymentsPerYear": 2,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "bullet",
+  "seed": 123456789,
+}
+`;
+
+exports[`fixed generator regressions > 'bullet' seed 4294967295 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.015",
+      "fixedCost": "150000",
+      "issuePrice": "97",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "bullet",
+    "nominalAnnualRate": "0.10",
+    "nominalPrincipal": "10500000",
+    "openingBankBalance": "1250000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "bullet",
+  "seed": 4294967295,
+}
+`;
+
+exports[`fixed generator regressions > 'serial' seed +0 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "150000",
+      "variableCostRate": "0.01",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "serial",
+    "nominalAnnualRate": "0.08",
+    "nominalPrincipal": "10000000",
+    "openingBankBalance": "500000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "serial",
+  "seed": 0,
+}
+`;
+
+exports[`fixed generator regressions > 'serial' seed 1 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.01",
+      "fixedCost": "150000",
+      "issuePrice": "96",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "serial",
+    "nominalAnnualRate": "0.05",
+    "nominalPrincipal": "11000000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 4,
+    "years": 5,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "serial",
+  "seed": 1,
+}
+`;
+
+exports[`fixed generator regressions > 'serial' seed 2 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.005",
+      "fixedCost": "150000",
+      "issuePrice": "97",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-07-01",
+    "loanType": "serial",
+    "nominalAnnualRate": "0.09",
+    "nominalPrincipal": "11500000",
+    "openingBankBalance": "1250000",
+    "paymentsPerYear": 4,
+    "years": 5,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "serial",
+  "seed": 2,
+}
+`;
+
+exports[`fixed generator regressions > 'serial' seed 42 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "150000",
+      "variableCostRate": "0.02",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "serial",
+    "nominalAnnualRate": "0.10",
+    "nominalPrincipal": "11500000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 4,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "serial",
+  "seed": 42,
+}
+`;
+
+exports[`fixed generator regressions > 'serial' seed 2026 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.01",
+      "fixedCost": "150000",
+      "issuePrice": "96",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "serial",
+    "nominalAnnualRate": "0.05",
+    "nominalPrincipal": "9500000",
+    "openingBankBalance": "1000000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "serial",
+  "seed": 2026,
+}
+`;
+
+exports[`fixed generator regressions > 'serial' seed 123456789 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "fixedCost": "200000",
+      "variableCostRate": "0.02",
+    },
+    "financingType": "bank",
+    "issueDate": "2026-01-01",
+    "loanType": "serial",
+    "nominalAnnualRate": "0.04",
+    "nominalPrincipal": "10000000",
+    "openingBankBalance": "500000",
+    "paymentsPerYear": 2,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "serial",
+  "seed": 123456789,
+}
+`;
+
+exports[`fixed generator regressions > 'serial' seed 4294967295 retains exact generated snapshot 1`] = `
+{
+  "attempts": 1,
+  "caseInput": {
+    "financingTerms": {
+      "brokerageRate": "0.015",
+      "fixedCost": "150000",
+      "issuePrice": "97",
+    },
+    "financingType": "bond",
+    "issueDate": "2026-01-01",
+    "loanType": "serial",
+    "nominalAnnualRate": "0.10",
+    "nominalPrincipal": "10500000",
+    "openingBankBalance": "1250000",
+    "paymentsPerYear": 1,
+    "years": 4,
+  },
+  "generatorVersion": "1.0.0",
+  "loanType": "serial",
+  "seed": 4294967295,
+}
+`;
+
+exports[`fixed generator regressions > retains the Mulberry32 uint32 sequence for seed zero 1`] = `
+[
+  1144304738,
+  1416247,
+  958946056,
+  627933444,
+  2007157716,
+  2340967985,
+  2642484575,
+  2787370982,
+]
+`;
