@@ -507,12 +507,3 @@ exports[`fixed generator regressions > retains the Mulberry32 uint32 sequence fo
   2787370982,
 ]
 `;
-
-exports[`generated Level 1 contract sample > keeps all options in their sets and every accepted case inside all guardrails 1`] = `
-{
-  "maximumAttempts": 1,
-  "minimumAttempts": 1,
-  "rejectedCase": undefined,
-  "sampleCases": 300,
-}
-`;
