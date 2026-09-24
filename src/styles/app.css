@@ -121,7 +121,6 @@
   .resume-actions .button, .start-row .button { width: 100%; }
   .case-header { padding: 1.2rem; }
   .case-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .case-id { display: none; }
   .workspace-actions { width: 100%; }
   .workspace-actions .button { flex: 1; }
   .step-heading { flex-wrap: wrap; gap: .8rem; }
@@ -247,6 +246,7 @@
 /* L8C: two fixed-direction amortization tables and term-by-term bookkeeping. */
 .amortization-work, .bookkeeping-work { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; min-width: 0; }
 .amortization-work .work-card, .bookkeeping-work .work-card { width: 100%; max-width: none; min-width: 0; }
+.amortization-work .is-active-table { border-color: var(--primary); box-shadow: 0 0 0 2px var(--accent-soft); }
 .amortization-work .table-scroll { width: 100%; min-width: 0; overflow-x: auto; }
 .amortization-table { min-width: 760px; }
 .row-status { display: block; margin-top: .2rem; font-size: .68rem; font-weight: 700; color: var(--text-muted); white-space: nowrap; }

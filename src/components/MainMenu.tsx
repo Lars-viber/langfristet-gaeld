@@ -64,7 +64,7 @@ export function MainMenu({ mode, restorable, onStart, onContinue, onNewCase }: M
             <span className="recovery-mark" aria-hidden="true">!</span>
             <div>
               <h2 id="corrupt-title">Den gemte opgave kan ikke åbnes</h2>
-              <p>Opgaven er beskadiget eller gemt i en version, som denne app ikke understøtter. Du kan starte en ny opgave.</p>
+              <p>Den gemte opgave kan ikke åbnes. Du kan starte en ny opgave.</p>
               <button className="button button-primary" type="button" onClick={onNewCase}>Start ny opgave</button>
             </div>
           </div>

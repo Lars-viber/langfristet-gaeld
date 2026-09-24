@@ -23,7 +23,6 @@ export function CaseHeader({ state }: { state: StudentState }) {
     <section className="case-header card" aria-labelledby="case-heading">
       <div className="case-header-title">
         <div><p className="eyebrow">Din case</p><h2 id="case-heading">Låneaftalen</h2></div>
-        <span className="case-id">Case #{String(state.generatedCase.seed).padStart(10, '0')}</span>
       </div>
       <dl className="case-details">
         {details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}

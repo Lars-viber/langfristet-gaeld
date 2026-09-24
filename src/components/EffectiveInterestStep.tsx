@@ -77,9 +77,9 @@ export function EffectiveInterestStep({ state, onAction, readOnly }: {
     </div>
     <div className="work-card">
       <div className="work-card-heading">
-        <p className="eyebrow">IA-beregning</p>
+        <p className="eyebrow">Renteberegning</p>
         <h3>Effektiv rente pr. termin</h3>
-        <p>Appen beregner renten, når hele betalingsrækken er klar. Du skal ikke skrive IA(…).</p>
+        <p>Appen beregner renten, når hele betalingsrækken er klar.</p>
       </div>
       {state.effectiveInterest.rateCalculated
         ? <p className="effective-rate" role="status">{state.caseResult.effectiveInterest.displayedPercent.replace('.', ',')} % <small>pr. termin · 4 decimaler</small></p>

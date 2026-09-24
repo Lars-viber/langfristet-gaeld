@@ -69,12 +69,12 @@ export function ClassificationStep({ state, onAction, readOnly }: {
     {state.classification.reconciled && <section className="work-card" aria-labelledby="reclassification-heading">
       <div className="work-card-heading"><p className="eyebrow">B · Omklassifikation</p><h3 id="reclassification-heading">Skal gælden omklassificeres?</h3></div>
       {positive ? <>
-        <p className="posting-help">Den kortfristede del er positiv. Bogfør omklassifikationen med Debet 6320/6330 og Kredit 6760. Angiv positive beløb og D/K for hver linje.</p>
+        <p className="posting-help">Den kortfristede del er positiv. Bogfør omklassifikationen med relevante konti, D/K og positive beløb.</p>
         <PostingBlockEditor block={state.classification.reclassification} readOnly={readOnly}
           onChange={(lines) => onAction({ type: 'setReclassificationBlock', lines })}
           onCheck={() => onAction({ type: 'checkReclassification' })} />
       </> : <>
-        <p>Den kortfristede del er nul. Vælg, om der skal bogføres en omklassifikation.</p>
+        <p>Den kortfristede del er nul. Skal der foretages omklassifikation?</p>
         <div className="answer-options" role="group" aria-label="Omklassifikation ved nul kortfristet del">
           {(['yes', 'no'] as const).map((answer) => <label key={answer}>
             <input type="radio" name="reclassification-answer" value={answer} disabled={readOnly}

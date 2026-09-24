@@ -28,11 +28,11 @@ export function AmortizationStep({ state, onAction, readOnly }: {
     const title = subtable === 'income' ? 'Resultatopgørelsen' : 'Balancen';
     const rows = subtable === 'income' ? state.caseResult.incomeSchedule : state.caseResult.carryingSchedule;
     const activeTerm = view.activeAmortizationSubtable === subtable ? view.activeAmortizationTerm : null;
-    return <section className="work-card" aria-label={title} key={subtable}>
+    return <section className={`work-card ${activeTerm !== null ? 'is-active-table' : ''}`} aria-label={title} key={subtable}>
       <div className="work-card-heading">
         <p className="eyebrow">{subtable === 'income' ? 'A · Renteomkostning' : 'B · Amortiseret kostpris'}</p>
         <h3>{title}</h3>
-        <p>Termin 1 og 2 beregnes manuelt med =. Godkendte felter låses enkeltvis.</p>
+        <p>{activeTerm !== null ? `Du arbejder nu med termin ${activeTerm}.` : 'Termin 1 og 2 beregnes manuelt med =. Godkendte felter låses enkeltvis.'}</p>
       </div>
       <div className="table-scroll" role="region" aria-label={`Vandret rulbar tabel: ${title}`} tabIndex={0}>
         <table className="finance-table amortization-table">
@@ -78,7 +78,7 @@ export function AmortizationStep({ state, onAction, readOnly }: {
 
   const manualApproved = state.amortization.terms[1]?.approved && state.amortization.terms[2]?.approved;
   return <div className="step-work amortization-work">
-    <p className="calculation-help">Renteomkostning i alt beregnes af kostpris primo og effektiv rente pr. termin. Amortisering er forskellen til nominel rente. Kostpris ultimo følger af kostpris primo, afdrag og amortisering. Brug <strong>[Effektiv rente · fuld præcision]</strong> i din formel, når du henviser til IA-renten.</p>
+    <p className="calculation-help">Beregn først renteomkostning og amortisering for termin 1, og derefter kostpris ultimo. Gentag for termin 2. Brug <strong>[Effektiv rente · fuld præcision]</strong> i formlen, når du henviser til renten fra trin 4.</p>
     {table('income')}
     {table('balance')}
     {manualApproved && !state.amortization.remainingCalculated && !readOnly && <div className="row-action">
