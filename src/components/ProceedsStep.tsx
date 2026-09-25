@@ -1,7 +1,6 @@
 import Decimal from 'decimal.js';
 import type { ProceedsField, StudentAction, StudentState } from '../student/types';
 import { ManualCalculationField } from './ManualCalculationField';
-import { FieldActionBadge } from './FieldActionBadge';
 
 function danishNumber(raw: string): string {
   const [whole, fraction] = raw.split('.');
@@ -26,8 +25,19 @@ export function ProceedsStep({ state, onAction, readOnly }: ProceedsStepProps) {
   function given(symbol: string, label: string, value: string, unit = 'kr.') {
     return <div className="calculation-row given-row">
       <span className="calculation-sign" aria-hidden="true">{symbol}</span>
-      <span className="calculation-label">{label}<FieldActionBadge action="oplyst" /></span>
-      <strong>{value} <span className="unit">{unit}</span></strong>
+      <span className="calculation-label">{label}</span>
+      <span className="calculation-work" />
+      <strong className={unit ? 'calculation-amount' : 'calculation-assumption'}>{value}{unit && <> <span className="unit">{unit}</span></>}</strong>
+      <span className="calculation-status" />
+    </div>;
+  }
+  function assumption(symbol: string, label: string, value: string) {
+    return <div className="calculation-row assumption-row">
+      <span className="calculation-sign" aria-hidden="true">{symbol}</span>
+      <span className="calculation-label">{label}</span>
+      <strong className="calculation-work">{value}</strong>
+      <span className="calculation-amount" />
+      <span className="calculation-status" />
     </div>;
   }
   function manual(symbol: string, label: string, key: ProceedsField) {
@@ -37,45 +47,41 @@ export function ProceedsStep({ state, onAction, readOnly }: ProceedsStepProps) {
         : key === 'marketValue' ? calculation.marketValue : calculation.brokerage;
     return <div className={`calculation-row input-row ${key === 'proceeds' ? 'total-row' : ''}`} key={key}>
       <span className="calculation-sign" aria-hidden="true">{symbol}</span>
+      <label className="calculation-label" htmlFor={`proceeds-${key}`}>{label}</label>
       <ManualCalculationField id={`proceeds-${key}`} label={label} field={state.proceeds[key]}
         active={active === key} readOnly={readOnly} feedbackContext={key === 'brokerage' ? 'brokerage' : 'default'}
         approvedResult={`${danishNumber(result.toFixed(2))} kr.`}
+        variant="proceeds" placeholder={key === 'variableCost' || key === 'brokerage' ? 'Beregn et positivt beløb med =' : 'Beregn med ='}
         onChange={(raw) => onAction({ type: 'editProceedsFormula', field: key, raw })}
         onCheck={() => onAction({ type: 'checkProceedsField', field: key })} />
     </div>;
   }
   const completed = state.completedSteps.includes('proceeds');
+  const canContinue = completed && !readOnly && state.sessionStatus === 'active' && state.currentStep === 'proceeds';
   return <div className="step-work proceeds-work">
     <aside className="proceeds-reference" aria-label="Grundlag for provenuberegning">
-      <p className="eyebrow">Grundlag</p>
-      <h3>Beregn provenu</h3>
-      <p>Arbejd lodret i opstillingen. Fradragets retning er allerede vist med −.</p>
-      <p><strong>Din opgave:</strong> {input.financingType === 'bank' ? 'Beregn omkostningerne og provenuet.' : 'Beregn kursværdi, kurtage og provenuet.'}</p>
+      <h2 id="step-heading">Provenu</h2>
+      <p>Her arbejder du med lånets omkostninger og det beløb, virksomheden modtager.</p>
+      <p className="proceeds-reference-note">Fradragets retning er allerede vist med −.</p>
+      {canContinue && <button className="button button-primary proceeds-continue" type="button" onClick={() => onAction({ type: 'continueToNextStep' })}>Fortsæt til Ydelsesplan</button>}
     </aside>
     <div className="work-card proceeds-statement">
-      <div className="work-card-heading">
-        <p className="eyebrow">Regneopstilling</p>
-        <h3>Provenu</h3>
-        <p>{input.financingType === 'bank' ? 'Beregn omkostningerne og det beløb, virksomheden modtager.' : 'Beregn kursværdi, kurtage og det beløb, virksomheden modtager.'}</p>
-      </div>
-      <p className="calculation-help">Beregn et positivt beløb med =. Fortegnet fremgår af opstillingen.</p>
       <div className="calculation-stack">
         {given('', input.financingType === 'bank' ? 'Hovedstol' : 'Nominel hovedstol', danishNumber(input.nominalPrincipal))}
         {input.financingType === 'bank' ? <>
-          <div className="given-detail">Variabel omkostningssats <strong>{ratePercent(input.financingTerms.variableCostRate)} %</strong> <FieldActionBadge action="oplyst" /></div>
+          {assumption('', 'Variabel omkostningssats', `${ratePercent(input.financingTerms.variableCostRate)} %`)}
           {manual('−', 'Variable låneomkostninger i kr.', 'variableCost')}
           {given('−', 'Faste låneomkostninger', danishNumber(input.financingTerms.fixedCost))}
           {manual('=', 'Provenu', 'proceeds')}
         </> : <>
-          {given('×', 'Kurs', danishNumber(input.financingTerms.issuePrice), '')}
+          {assumption('×', 'Kurs', danishNumber(input.financingTerms.issuePrice))}
           {manual('=', 'Kursværdi', 'marketValue')}
-          <div className="given-detail">Kurtagesats <strong>{ratePercent(input.financingTerms.brokerageRate)} %</strong> <FieldActionBadge action="oplyst" /></div>
+          {assumption('', 'Kurtagesats', `${ratePercent(input.financingTerms.brokerageRate)} %`)}
           {manual('−', 'Kurtage i kr.', 'brokerage')}
           {given('−', 'Faste låneomkostninger', danishNumber(input.financingTerms.fixedCost))}
           {manual('=', 'Provenu', 'proceeds')}
         </>}
       </div>
-      {completed && <div className="continue-panel" role="status"><strong>Trin 1 er godkendt.</strong><span> Din opstilling bliver stående, indtil du aktivt fortsætter.</span></div>}
     </div>
   </div>;
 }

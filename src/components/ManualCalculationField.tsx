@@ -11,12 +11,14 @@ interface ManualCalculationFieldProps {
   readOnly: boolean;
   feedbackContext?: FeedbackContext;
   approvedResult?: string;
+  variant?: 'default' | 'proceeds';
+  placeholder?: string;
   onChange(raw: string): void;
   onCheck(): void;
 }
 
 export function ManualCalculationField({
-  id, label, field, active, readOnly, feedbackContext, approvedResult, onChange, onCheck,
+  id, label, field, active, readOnly, feedbackContext, approvedResult, variant = 'default', placeholder, onChange, onCheck,
 }: ManualCalculationFieldProps) {
   const approved = field?.approved ?? false;
   const locked = readOnly || approved;
@@ -25,10 +27,10 @@ export function ManualCalculationField({
   return (
     <form className={`manual-field ${approved ? 'is-approved' : ''} ${waiting ? 'is-waiting' : ''}`}
       onSubmit={(event) => { event.preventDefault(); if (!locked && active) onCheck(); }}>
-      <label htmlFor={id}>{label}<FieldActionBadge action="beregn" /></label>
+      {variant !== 'proceeds' && <label htmlFor={id}>{label}<FieldActionBadge action="beregn" /></label>}
       <div className="manual-field-controls">
         <input id={id} type="text" inputMode="decimal" autoComplete="off" spellCheck={false}
-          value={field?.raw ?? ''} placeholder={waiting ? 'Afvent forrige beregning' : '= …'}
+          value={field?.raw ?? ''} placeholder={waiting ? 'Afvent forrige beregning' : placeholder ?? '= …'}
           onChange={(event) => onChange(event.target.value)}
           readOnly={locked} disabled={waiting} aria-invalid={field?.errorCode ? true : undefined}
           aria-describedby={field?.errorCode ? feedbackId : undefined} />

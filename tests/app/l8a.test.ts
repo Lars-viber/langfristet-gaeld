@@ -47,7 +47,7 @@ describe('L8A proceeds and initial recognition', () => {
     const html = render(fresh(r1));
     expect(html).toContain('Variable låneomkostninger i kr.');
     expect(html).toContain('Variabel omkostningssats');
-    expect(html).toContain('Beregn et positivt beløb med =. Fortegnet fremgår af opstillingen.');
+    expect(html).toContain('placeholder="Beregn et positivt beløb med ="');
     expect(html).not.toContain('210.000');
     expect(html).not.toContain('6.590.000');
     expect(html).toContain('proceeds-proceeds');
@@ -173,7 +173,7 @@ describe('L8A proceeds and initial recognition', () => {
     for (const step of ['proceeds', 'initialRecognition'] as const) {
       const history = take(state, { type: 'viewHistoricalStep', step });
       const html = render(history);
-      expect(html).toContain('Kun visning');
+      expect(html).toContain('Trinnet er skrivebeskyttet.');
       expect(html).not.toContain('Tilføj linje');
       if (step === 'proceeds') expect(html).toContain('value=\"=7.500.000*97%\"');
       else expect(html).toContain('value=\"7102250\"');

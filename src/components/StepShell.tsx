@@ -20,7 +20,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
     && state.completedSteps.includes(step) && nextStep !== undefined;
   return (
     <section className="step-shell card" aria-labelledby="step-heading">
-      <div className="step-heading">
+      {step !== 'proceeds' && <div className="step-heading">
         <div className="step-number-large" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
         <div>
           <p className="eyebrow">Trin {copy.number} af 8</p>
@@ -28,7 +28,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
           <p>{copy.description}</p>
         </div>
         <span className={`step-mode ${readOnly ? 'is-readonly' : ''}`}>{readOnly ? 'Kun visning' : 'Aktuelt trin'}</span>
-      </div>
+      </div>}
       {step === 'proceeds' ? <ProceedsStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'initialRecognition' ? <InitialRecognitionStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'contractSchedule' ? <ContractScheduleStep state={state} onAction={onAction} readOnly={readOnly} />
@@ -44,7 +44,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
             <p>Her får du plads til beregninger og bogføring.</p>
           </div>
         </div>}
-      {canContinue && <div className="step-continue"><span>Trinnet er godkendt. Du vælger selv, hvornår du fortsætter.</span><button className="button button-primary" type="button" onClick={() => onAction({ type: 'continueToNextStep' })}>Fortsæt til {STEP_COPY[nextStep].title}</button></div>}
+      {canContinue && step !== 'proceeds' && <div className="step-continue"><span>Trinnet er godkendt. Du vælger selv, hvornår du fortsætter.</span><button className="button button-primary" type="button" onClick={() => onAction({ type: 'continueToNextStep' })}>Fortsæt til {STEP_COPY[nextStep].title}</button></div>}
     </section>
   );
 }
