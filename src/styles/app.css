@@ -433,6 +433,12 @@
 .case-details { margin-top: .35rem; }
 .task-introduction { position: sticky; top: 12px; z-index: 1; align-self: stretch; }
 
+/* R1.3: show every stated loan term without turning the agreement into a tall list. */
+.case-overview { grid-template-columns: minmax(440px, .8fr) minmax(0, 1.2fr); }
+.case-details { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .32rem .55rem; }
+.case-details dt { font-size: .58rem; letter-spacing: .035em; }
+.case-details dd { font-size: .74rem; }
+
 .step-shell { padding: .65rem .75rem; }
 .proceeds-work { grid-template-columns: minmax(200px, .32fr) minmax(0, 1fr); gap: .65rem; margin-top: 0; }
 .proceeds-reference {
@@ -504,15 +510,18 @@
 @media (max-width: 760px) {
   .workspace-flow-header { display: block; }
   .workspace-actions { margin-top: .45rem; flex-wrap: wrap; }
+  .case-overview { grid-template-columns: minmax(0, 1fr); }
   .task-introduction { position: static; }
   .proceeds-work { grid-template-columns: minmax(0, 1fr); }
   .proceeds-reference { min-height: 0; }
   .proceeds-continue { margin-top: .65rem; }
+  .case-details { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
   .menu-intro h1, .section-heading h2 { font-size: 1.75rem; }
   .workspace-actions { width: 100%; }
   .workspace-actions .button { flex: 1 1 auto; }
+  .case-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .calculation-row { grid-template-columns: 1rem minmax(0, 1fr); gap: .3rem; }
   .calculation-row .calculation-work, .calculation-row .calculation-amount, .calculation-row .calculation-status { grid-column: 2; }
   .calculation-assumption { grid-column: 2; }

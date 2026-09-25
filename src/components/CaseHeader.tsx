@@ -13,11 +13,21 @@ export function CaseHeader({ state }: { state: StudentState }) {
   const details = [
     ['Lånetype', LOAN_TYPE_LABELS[input.loanType]],
     ['Finansiering', input.financingType === 'bank' ? 'Banklån' : 'Obligationslån'],
-    ['Hovedstol', `${danishDecimal(input.nominalPrincipal)} kr.`],
+    [input.financingType === 'bank' ? 'Hovedstol' : 'Nominel hovedstol', `${danishDecimal(input.nominalPrincipal)} kr.`],
     ['Optagelsesdato', input.issueDate.split('-').reverse().join('.')],
     ['Løbetid', `${input.years} år`],
     ['Terminer pr. år', String(input.paymentsPerYear)],
     ['Nominel rente', `${danishDecimal(new Decimal(input.nominalAnnualRate).times(100).toString())} % p.a.`],
+    ...(input.financingType === 'bank'
+      ? [
+        ['Variabel omkostningssats', `${danishDecimal(new Decimal(input.financingTerms.variableCostRate).times(100).toString())} %`],
+        ['Faste låneomkostninger', `${danishDecimal(input.financingTerms.fixedCost)} kr.`],
+      ]
+      : [
+        ['Kurs', danishDecimal(input.financingTerms.issuePrice)],
+        ['Kurtagesats', `${danishDecimal(new Decimal(input.financingTerms.brokerageRate).times(100).toString())} %`],
+        ['Faste låneomkostninger', `${danishDecimal(input.financingTerms.fixedCost)} kr.`],
+      ]),
   ];
   return (
     <section className="case-header card" aria-labelledby="case-heading">
