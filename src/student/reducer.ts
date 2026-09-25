@@ -72,7 +72,7 @@ function completeStep(state: StudentState): void {
 }
 function continueToNextStep(state: StudentState): void {
   if (!state.completedSteps.includes(state.currentStep)) return;
-  const index = STUDENT_STEPS.indexOf(state.currentStep);
+  const index = STUDENT_STEPS.indexOf(state.currentStep as typeof STUDENT_STEPS[number]);
   if (index >= STUDENT_STEPS.length - 1) return;
   if (state.currentStep === 'classification') {
     const accountBalances = calculateAccountBalances(state.caseResult.input, state.caseResult.postingEvents);
@@ -109,7 +109,9 @@ function proceedsOrder(state: StudentState): ProceedsField[] {
 function scheduleFields(state: StudentState): ScheduleField[] {
   return state.generatedCase.loanType === 'annuity'
     ? ['openingPrincipal', 'nominalInterest', 'principalRepayment', 'closingPrincipal']
-    : ['openingPrincipal', 'payment', 'nominalInterest', 'principalRepayment', 'closingPrincipal'];
+    : state.generatedCase.loanType === 'serial'
+      ? ['openingPrincipal', 'payment', 'nominalInterest', 'closingPrincipal']
+      : ['openingPrincipal', 'payment', 'nominalInterest', 'principalRepayment', 'closingPrincipal'];
 }
 function incomeFields(): IncomeField[] { return ['nominalInterest', 'amortization', 'totalInterestExpense']; }
 function balanceFields(): BalanceField[] { return ['openingCarryingAmount', 'principalRepayment', 'amortization', 'closingCarryingAmount']; }
@@ -170,14 +172,22 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       return next;
     }
     case 'editSchedulePrerequisite': {
-      if (!allowed(state, 'contractSchedule') || (action.field === 'fixedRepayment' && state.generatedCase.loanType !== 'serial') || state.schedule.prerequisites[action.field]?.approved || state.schedule.approvedTerms.length > 0) return state;
+      const required = state.generatedCase.loanType === 'serial'
+        ? ['principal', 'termRate', 'termCount', 'fixedRepayment']
+        : ['principal', 'termRate', 'termCount'];
+      if (!allowed(state, 'contractSchedule') || !required.includes(action.field) || required.find((key) => !state.schedule.prerequisites[key as SchedulePrerequisite]?.approved) !== action.field || state.schedule.prerequisites[action.field]?.approved || state.schedule.approvedTerms.length > 0) return state;
       const next = copy(state); editField(next.schedule.prerequisites[action.field] ??= field(), action.raw); return next;
     }
     case 'checkSchedulePrerequisite': {
-      if (!allowed(state, 'contractSchedule') || (action.field === 'fixedRepayment' && state.generatedCase.loanType !== 'serial') || state.schedule.prerequisites[action.field]?.approved) return state;
+      const required = state.generatedCase.loanType === 'serial'
+        ? ['principal', 'termRate', 'termCount', 'fixedRepayment']
+        : ['principal', 'termRate', 'termCount'];
+      if (!allowed(state, 'contractSchedule') || !required.includes(action.field) || required.find((key) => !state.schedule.prerequisites[key as SchedulePrerequisite]?.approved) !== action.field || state.schedule.prerequisites[action.field]?.approved) return state;
       const next = copy(state); const target = next.schedule.prerequisites[action.field] ??= field();
       const result = calculatedResult(state);
-      const validation = action.field === 'termCount'
+      const validation = action.field === 'principal'
+        ? validateAmount(target.raw, { expected: new D(result.input.nominalPrincipal), requirePositive: true })
+        : action.field === 'termCount'
         ? validateManualCalculation(target.raw, { expected: new D(result.contract.rows.length), expectedScale: 10, requirePositive: true })
         : action.field === 'termRate'
           ? validateManualCalculation(target.raw, { expected: result.contract.termRate, expectedScale: 10, requirePositive: true })
@@ -199,9 +209,22 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       const next = copy(state); const row = next.schedule.rows[action.term] ??= {};
       for (const key of scheduleFields(state)) {
         const target = row[key] ??= field();
-        if (!target.approved) storeCheck(target, validateManualCalculation(target.raw, { expected: expected[key], requirePositive: true }));
+        if (!target.approved) {
+          const literalEntry = key === 'openingPrincipal'
+            || (state.generatedCase.loanType === 'bullet' && key === 'principalRepayment' && action.term !== state.caseResult.contract.rows.length);
+          storeCheck(target, literalEntry
+            ? validateAmount(target.raw, { expected: expected[key], requirePositive: key !== 'principalRepayment' })
+            : validateManualCalculation(target.raw, { expected: expected[key], requirePositive: true }));
+        }
       }
-      if (scheduleFields(state).every((key) => row[key]?.approved)) next.schedule.approvedTerms.push(action.term);
+      if (scheduleFields(state).every((key) => row[key]?.approved)) {
+        next.schedule.approvedTerms.push(action.term);
+        const count = next.generatedCase.caseInput.years * next.generatedCase.caseInput.paymentsPerYear;
+        if (manualTerms(next.generatedCase.loanType, count).every((term) => next.schedule.approvedTerms.includes(term))) {
+          next.schedule.remainingCalculated = true;
+          completeStep(next);
+        }
+      }
       return next;
     }
     case 'calculateRemainingSchedule': {
@@ -364,7 +387,11 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
     }
     case 'finishLevel1': {
       if (!allowed(state, 'completion') || Object.values(state.completion.checks).some((passed) => !passed)) return state;
-      const next = copy(state); next.completedSteps.push('completion'); next.sessionStatus = 'completed'; return next;
+      const next = copy(state);
+      completeStep(next);
+      if (!next.completedSteps.includes('finalOverview')) next.completedSteps.push('finalOverview');
+      next.sessionStatus = 'completed';
+      return next;
     }
   }
 }

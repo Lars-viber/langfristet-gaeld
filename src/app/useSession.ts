@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { LoanType } from '../domain';
-import { createLocalStorageAdapter } from '../persistence';
+import { clearStudentSession, createLegacyLocalStorageAdapter, createLocalStorageAdapter } from '../persistence';
 import type { PersistenceErrorCode } from '../persistence';
 import type { StudentAction, StudentState } from '../student';
 import { clearAppSession, loadAppSession, startStudentCase, transitionStudentSession } from './controller';
@@ -9,20 +9,25 @@ export type Screen =
   | { kind: 'loading' }
   | { kind: 'menu' }
   | { kind: 'resume'; state: StudentState }
+  | { kind: 'legacy' }
   | { kind: 'corrupt'; code: PersistenceErrorCode }
   | { kind: 'active'; state: StudentState };
 
 export function useSession() {
   const adapter = useMemo(() => createLocalStorageAdapter(), []);
+  const legacyAdapter = useMemo(() => createLegacyLocalStorageAdapter(), []);
   const [screen, setScreen] = useState<Screen>({ kind: 'loading' });
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const loaded = loadAppSession(adapter);
     if (loaded.status === 'restored') setScreen({ kind: 'resume', state: loaded.state });
-    else if (loaded.status === 'empty') setScreen({ kind: 'menu' });
+    else if (loaded.status === 'empty') {
+      try { setScreen(legacyAdapter.load() === null ? { kind: 'menu' } : { kind: 'legacy' }); }
+      catch { setScreen({ kind: 'corrupt', code: 'STORAGE_ERROR' }); }
+    }
     else setScreen({ kind: 'corrupt', code: loaded.code });
-  }, [adapter]);
+  }, [adapter, legacyAdapter]);
 
   function start(loanType: LoanType | null): void {
     const result = startStudentCase(adapter, loanType);
@@ -59,10 +64,15 @@ export function useSession() {
   }
 
   function newCase(): void {
-    if (!globalThis.confirm('Start en ny opgave? Den gemte opgave og dine svar slettes.')) return;
+    if (screen.kind !== 'legacy' && !globalThis.confirm('Start en ny opgave? Den gemte opgave og dine svar slettes.')) return;
     const result = clearAppSession(adapter);
     if (result.status === 'error') {
       setNotice('Den gemte opgave kunne ikke slettes. Prøv igen.');
+      return;
+    }
+    const legacyResult = clearStudentSession(legacyAdapter);
+    if (legacyResult.status === 'error') {
+      setNotice('Den tidligere gemte opgave kunne ikke slettes. Prøv igen.');
       return;
     }
     setNotice(null);

@@ -530,3 +530,43 @@
   .input-row .approved-result { grid-column: 1; grid-row: 2; text-align: right; }
   .input-row .approved-mark { grid-column: 2; grid-row: 2; }
 }
+
+/* R2: compact, table-first payment schedule. */
+.r2-schedule-work { display: grid; grid-template-columns: minmax(205px, .28fr) minmax(0, 1fr); gap: .65rem; align-items: stretch; }
+.schedule-reference { display: flex; flex-direction: column; padding: .75rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-muted); }
+.schedule-reference h2 { margin: 0 0 .35rem; color: var(--primary-strong); font-size: 1rem; font-weight: 750; }
+.schedule-reference p { margin: 0; color: var(--text-muted); font-size: .76rem; line-height: 1.38; }
+.schedule-reference .schedule-date-note { margin-top: .5rem; }
+.schedule-continue { margin-top: auto; align-self: flex-start; min-height: 34px; padding: .35rem .55rem; font-size: .72rem; }
+.schedule-main { display: grid; gap: .65rem; min-width: 0; }
+.schedule-setup, .schedule-table-card { width: 100%; max-width: none; padding: .65rem .75rem; }
+.schedule-setup-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .45rem; }
+.schedule-setup-field { min-width: 0; }
+.schedule-setup-field > label { display: block; margin-bottom: .2rem; color: var(--text-muted); font-size: .68rem; font-weight: 750; }
+.schedule-setup-control { display: flex; gap: .3rem; min-width: 0; }
+.schedule-setup-control input { min-width: 0; flex: 1; min-height: 36px; padding: .3rem .42rem; border: 1px solid var(--border); border-radius: 5px; font: .74rem Consolas, monospace; }
+.schedule-setup-field.is-approved input { border-color: #8CBDAB; background: #F0F8F4; }
+.schedule-setup-control .button { min-height: 36px; padding: .3rem .42rem; font-size: .68rem; }
+.schedule-setup-result { display: flex; justify-content: space-between; gap: .35rem; margin-top: .18rem; color: var(--success); font-size: .7rem; font-variant-numeric: tabular-nums; }
+.schedule-setup-result span:last-child { font-weight: 800; }
+.schedule-setup-field .validation-message { margin: .16rem 0 0; font-size: .65rem; }
+.schedule-app-action { margin-top: .45rem; padding-top: .45rem; border-top: 1px solid var(--border); }
+.schedule-app-action > span { display: flex; align-items: center; gap: .6rem; color: var(--primary-strong); font-size: .75rem; }
+.schedule-app-action output { margin-left: auto; padding: .25rem .45rem; border: 1px solid #C3D7EB; border-radius: 5px; background: #EDF4FC; font-weight: 750; font-variant-numeric: tabular-nums; }
+.schedule-app-action small { color: var(--text-muted); font-size: .65rem; }
+.schedule-instruction { margin: 0 0 .45rem; color: var(--primary-strong); font-size: .75rem; font-weight: 700; }
+.schedule-scroll { max-height: 390px; overflow: auto; }
+.schedule-table { margin: 0; min-width: 850px; font-size: .73rem; }
+.schedule-table th, .schedule-table td { min-width: 112px; padding: .34rem .3rem; vertical-align: top; }
+.schedule-table th:first-child, .schedule-table td:first-child { min-width: 48px; }
+.schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { min-width: 76px; }
+.schedule-table .table-field input { min-height: 34px; padding: .28rem .35rem; font-size: .68rem; }
+.schedule-table .table-field.is-approved input { border-color: #8CBDAB; background: #F0F8F4; }
+.schedule-table .table-result { display: flex; justify-content: space-between; gap: .2rem; margin-top: .12rem; color: var(--success); font-size: .64rem; font-variant-numeric: tabular-nums; }
+.schedule-table .validation-message { margin-top: .12rem; font-size: .61rem; }
+.schedule-row-action { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .45rem; font-size: .72rem; }
+.schedule-row-action span { color: var(--text-muted); }
+.schedule-row-action .button { min-height: 34px; padding: .3rem .5rem; font-size: .7rem; }
+.schedule-complete-note { margin: .45rem 0 0; color: var(--success); font-size: .72rem; font-weight: 750; }
+@media (max-width: 760px) { .r2-schedule-work { grid-template-columns: minmax(0, 1fr); }.schedule-reference { min-height: 0; }.schedule-continue { margin-top: .65rem; }.schedule-setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 500px) { .schedule-setup-grid { grid-template-columns: minmax(0, 1fr); }.schedule-row-action { align-items: stretch; flex-direction: column; }.schedule-row-action .button { width: 100%; } }

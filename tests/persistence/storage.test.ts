@@ -40,7 +40,7 @@ describe('L6 storage', () => {
       setItem: (key, value) => { values.set(key, value); },
       removeItem: (key) => { values.delete(key); },
     });
-    expect(SESSION_STORAGE_KEY).toBe('langfristet-gaeld:level1:session:v1');
+    expect(SESSION_STORAGE_KEY).toBe('langfristet-gaeld:level1:session:v2');
     expect(saveStudentSession(adapter, state())).toEqual({ status: 'saved' });
     const doc = JSON.parse(values.get(SESSION_STORAGE_KEY)!);
     expect(doc.schemaVersion).toBe(PERSISTENCE_SCHEMA_VERSION);

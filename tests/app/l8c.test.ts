@@ -13,8 +13,7 @@ import { r5 } from '../fixtures/r5';
 import type { GoldenFixture } from '../fixtures/types';
 
 const take = (state: StudentState, action: StudentAction) => {
-  const next = applyStudentAction(state, action);
-  return next.sessionStatus === 'active' && next.viewingStep === next.currentStep && next.completedSteps.includes(next.currentStep) ? applyStudentAction(next, { type: 'continueToNextStep' }) : next;
+  return applyStudentAction(state, action);
 };
 const render = (state: StudentState) => renderToStaticMarkup(createElement(AppShell, {
   state, onAction: () => {}, onReset: () => {}, onNewCase: () => {},
@@ -29,7 +28,7 @@ function atStep5(fixture: GoldenFixture): StudentState {
   });
   // Earlier steps are covered by L8A/L8B; focus this fixture on the Step 5 boundary.
   return { ...state, currentStep: 'amortizedCost', viewingStep: 'amortizedCost',
-    completedSteps: ['proceeds', 'initialRecognition', 'contractSchedule', 'effectiveInterest'] };
+    completedSteps: ['proceeds', 'contractSchedule', 'effectiveInterest'] };
 }
 
 function approveSubrow(state: StudentState, term: number, subtable: 'income' | 'balance'): StudentState {
@@ -52,8 +51,9 @@ function atStep6(fixture: GoldenFixture): StudentState {
     state = approveSubrow(state, term, 'balance');
   }
   state = take(state, { type: 'calculateRemainingAmortization' });
-  expect(state.currentStep).toBe('yearBookkeeping');
-  return state;
+  expect(state.currentStep).toBe('amortizedCost');
+  return { ...state, currentStep: 'yearBookkeeping', viewingStep: 'yearBookkeeping',
+    completedSteps: ['proceeds', 'contractSchedule', 'effectiveInterest', 'amortizedCost', 'classification'] };
 }
 
 function eventLines(state: StudentState, term: number, kind: 'payment' | 'amortization'): StudentPostingLine[] {
@@ -109,11 +109,11 @@ describe('L8C amortization and year bookkeeping', () => {
     }
     expect(render(state)).toContain('Beregn resterende terminer efter samme princip');
     state = take(state, { type: 'calculateRemainingAmortization' });
-    expect(state.currentStep).toBe('yearBookkeeping');
+    expect(state.currentStep).toBe('amortizedCost');
     expect(amortizationSubrowStatus(state, 3, 'income')).toBe('appCalculated');
     const history = take(state, { type: 'viewHistoricalStep', step: 'amortizedCost' });
     expect(render(history)).toContain('Beregnet af appen');
-    expect(render(history)).toContain('Kun visning');
+    expect(render(history)).toContain('readOnly');
   });
 
   it('has no final manual amortization term for a standing loan', () => {
@@ -208,16 +208,17 @@ describe('L8C amortization and year bookkeeping', () => {
     expect(deriveStudentView(state).activeBookkeepingTerm).toBe(2);
     state = approveBlock(state, 2, 'payment');
     state = approveBlock(state, 2, 'amortization');
-    expect(state.currentStep).toBe('classification');
+    expect(state.currentStep).toBe('yearBookkeeping');
+    state = transitionStudentSession(adapter, state, { type: 'continueToNextStep' }).state;
     state = transitionStudentSession(adapter, state, { type: 'viewHistoricalStep', step: 'yearBookkeeping' }).state;
     const loaded = loadStudentSession(adapter);
     expect(loaded.status).toBe('restored');
     if (loaded.status !== 'restored') throw new Error('Restore failed');
     expect(loaded.state.bookkeeping[1]?.payment.lines).toEqual(firstLines);
     expect(loaded.state.viewingStep).toBe('yearBookkeeping');
-    expect(loaded.state.currentStep).toBe('classification');
+    expect(loaded.state.currentStep).toBe('completion');
     const html = render(loaded.state);
-    expect(html).toContain('Kun visning');
+    expect(html).toContain('Trinnet er skrivebeskyttet.');
     expect(html).toContain('Bogføring af termin 2');
     expect(html).not.toContain('Tilføj linje');
     expect(html).not.toContain('Saldo Bankkonto');

@@ -38,7 +38,7 @@ describe('L6 serialization', () => {
     const base = fresh();
     const state: StudentState = {
       ...base, currentStep: 'effectiveInterest', viewingStep: 'effectiveInterest',
-      completedSteps: ['proceeds', 'initialRecognition', 'contractSchedule'],
+      completedSteps: ['proceeds', 'contractSchedule', 'effectiveInterest'],
       schedule: { prerequisites: { termCount: { raw: '4', approved: true, errorCode: null } }, annuityPaymentCalculated: true,
         rows: { 1: { openingPrincipal: { raw: '=7.000.000+0', approved: true, errorCode: null } } },
         approvedTerms: [1, 2], remainingCalculated: true },
@@ -52,8 +52,9 @@ describe('L6 serialization', () => {
     const base = fresh();
     const ready: StudentState = {
       ...base, currentStep: 'contractSchedule', viewingStep: 'contractSchedule',
-      completedSteps: ['proceeds', 'initialRecognition'],
+      completedSteps: ['proceeds'],
       schedule: { ...base.schedule, prerequisites: {
+        principal: { raw: '7000000', approved: true, errorCode: null },
         termCount: { raw: '=4*1', approved: true, errorCode: null },
         termRate: { raw: '=8%/1', approved: true, errorCode: null },
       } },
@@ -158,9 +159,9 @@ describe('L6 serialization', () => {
 
   it('rejects unsupported schema, ruleset and student-state versions', () => {
     const saved = dto(fresh());
-    reject({ ...saved, schemaVersion: 2 }, 'UNSUPPORTED_SCHEMA_VERSION');
+    reject({ ...saved, schemaVersion: 1 }, 'UNSUPPORTED_SCHEMA_VERSION');
     reject({ ...saved, rulesetVersion: '2.0.0' }, 'UNSUPPORTED_RULESET_VERSION');
-    reject({ ...saved, studentStateVersion: 2 }, 'UNSUPPORTED_STUDENT_STATE_VERSION');
+    reject({ ...saved, studentStateVersion: 1 }, 'UNSUPPORTED_STUDENT_STATE_VERSION');
   });
 
   it('checks loan type, seed, date, generator version and snapshot identity', () => {

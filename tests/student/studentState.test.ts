@@ -19,9 +19,7 @@ function generated(fixture: GoldenFixture, seed = 1): GeneratedLevel1Case {
   return { generatorVersion: '1.0.0', seed, loanType: fixture.input.loanType, attempts: 1, caseInput: fixture.input };
 }
 function take(state: StudentState, action: StudentAction): StudentState {
-  const next = applyStudentAction(state, action);
-  return next.sessionStatus === 'active' && next.viewingStep === next.currentStep && next.completedSteps.includes(next.currentStep)
-    ? applyStudentAction(next, { type: 'continueToNextStep' }) : next;
+  return applyStudentAction(state, action);
 }
 function dk(value: string): string { return value.replace('.', ','); }
 function formula(value: { toFixed(scale: number): string }): string { return `=${dk(value.toFixed(2))}+0`; }
@@ -41,18 +39,14 @@ function approveProceeds(state: StudentState): StudentState {
   }
   return state;
 }
-function approveInitial(state: StudentState): StudentState {
-  const event = calculateLoan(state.generatedCase.caseInput).postingEvents.find((entry) => entry.kind === 'origination')!;
-  state = take(state, { type: 'setInitialRecognitionLines', lines: lines(event.movements) });
-  return take(state, { type: 'checkInitialRecognition' });
-}
 function approveSchedule(state: StudentState): StudentState {
   const model = calculateLoan(state.generatedCase.caseInput);
   const prerequisites = [
-    ['termCount', `=${state.generatedCase.caseInput.years}*${state.generatedCase.caseInput.paymentsPerYear}`],
+    ['principal', dk(state.generatedCase.caseInput.nominalPrincipal)],
     ['termRate', `=${dk(state.generatedCase.caseInput.nominalAnnualRate)}/${state.generatedCase.caseInput.paymentsPerYear}`],
+    ['termCount', `=${state.generatedCase.caseInput.years}*${state.generatedCase.caseInput.paymentsPerYear}`],
     ...(state.generatedCase.loanType === 'serial' ? [['fixedRepayment', formula(model.contract.standardPayment!)]] : []),
-  ] as Array<['termCount' | 'termRate' | 'fixedRepayment', string]>;
+  ] as Array<['principal' | 'termCount' | 'termRate' | 'fixedRepayment', string]>;
   for (const [field, raw] of prerequisites) {
     state = take(state, { type: 'editSchedulePrerequisite', field, raw });
     state = take(state, { type: 'checkSchedulePrerequisite', field });
@@ -64,11 +58,20 @@ function approveSchedule(state: StudentState): StudentState {
     const row = model.contract.rows[term - 1]!;
     const fields = state.generatedCase.loanType === 'annuity'
       ? ['openingPrincipal', 'nominalInterest', 'principalRepayment', 'closingPrincipal'] as const
-      : ['openingPrincipal', 'payment', 'nominalInterest', 'principalRepayment', 'closingPrincipal'] as const;
-    for (const field of fields) state = take(state, { type: 'editScheduleField', term, field, raw: formula(row[field]) });
+      : state.generatedCase.loanType === 'serial'
+        ? ['openingPrincipal', 'payment', 'nominalInterest', 'closingPrincipal'] as const
+        : ['openingPrincipal', 'payment', 'nominalInterest', 'principalRepayment', 'closingPrincipal'] as const;
+    for (const field of fields) {
+      const raw = field === 'openingPrincipal' || (state.generatedCase.loanType === 'bullet' && field === 'principalRepayment' && term !== count)
+        ? dk(row[field].toFixed(2)) : formula(row[field]);
+      state = take(state, { type: 'editScheduleField', term, field, raw });
+    }
     state = take(state, { type: 'checkScheduleRow', term });
   }
-  return take(state, { type: 'calculateRemainingSchedule' });
+  return state;
+}
+function atSchedule(fixture: GoldenFixture): StudentState {
+  return take(approveProceeds(createStudentState(generated(fixture))), { type: 'continueToNextStep' });
 }
 function approveCashFlows(state: StudentState): StudentState {
   const model = calculateLoan(state.generatedCase.caseInput);
@@ -139,16 +142,22 @@ function approveBalances(state: StudentState): StudentState {
   return state;
 }
 function throughSchedule(fixture: GoldenFixture): StudentState {
-  return approveSchedule(approveInitial(approveProceeds(createStudentState(generated(fixture)))));
+  return take(approveSchedule(atSchedule(fixture)), { type: 'continueToNextStep' });
 }
 function throughAmortization(fixture: GoldenFixture): StudentState {
-  return approveAmortization(approveCashFlows(throughSchedule(fixture)));
+  return approveAmortization(take(approveCashFlows(throughSchedule(fixture)), { type: 'continueToNextStep' }));
+}
+function atClassification(fixture: GoldenFixture): StudentState {
+  return take(throughAmortization(fixture), { type: 'continueToNextStep' });
 }
 function throughBookkeeping(fixture: GoldenFixture): StudentState {
-  return approveBookkeeping(throughAmortization(fixture));
+  return approveBookkeeping(take(throughClassification(fixture), { type: 'continueToNextStep' }));
 }
 function throughClassification(fixture: GoldenFixture): StudentState {
-  return approveClassification(throughBookkeeping(fixture));
+  return approveClassification(atClassification(fixture));
+}
+function throughCompletion(fixture: GoldenFixture): StudentState {
+  return take(throughBookkeeping(fixture), { type: 'continueToNextStep' });
 }
 
 describe('L5 student progression', () => {
@@ -180,7 +189,7 @@ describe('L5 student progression', () => {
     expect(state.proceeds.variableCost).toMatchObject({ raw: '=1+1', approved: false, errorCode: 'WRONG_RESULT' });
     expect(take(state, { type: 'checkProceedsField', field: 'proceeds' })).toBe(state);
     state = approveProceeds(state);
-    expect(state.currentStep).toBe('initialRecognition');
+    expect(state.currentStep).toBe('proceeds');
   });
   it('requires bond market value then brokerage then proceeds', () => {
     let state = createStudentState(generated(r6));
@@ -188,7 +197,7 @@ describe('L5 student progression', () => {
     state = approveProceeds(state);
     expect(state.proceeds.marketValue?.approved).toBe(true);
     expect(state.proceeds.brokerage?.approved).toBe(true);
-    expect(state.currentStep).toBe('initialRecognition');
+    expect(state.currentStep).toBe('proceeds');
   });
   it('locks approved calculation fields', () => {
     let state = createStudentState(generated(r1));
@@ -203,37 +212,23 @@ describe('L5 student progression', () => {
     state = take(state, { type: 'editProceedsFormula', field: 'variableCost', raw: '=7.000.000*3%' });
     expect(state.proceeds.variableCost?.errorCode).toBeNull();
   });
-  it('locks initial recognition only as a whole posting block', () => {
-    let state = approveProceeds(createStudentState(generated(r1)));
-    state = take(state, { type: 'setInitialRecognitionLines', lines: [{ account: '5820', side: 'D', amount: '1' }] });
-    state = take(state, { type: 'checkInitialRecognition' });
-    expect(state.initialRecognition.approved).toBe(false);
-    expect(state.initialRecognition.errors).toContain('WRONG_NET_MOVEMENT');
-    state = approveInitial(state);
-    expect(state.initialRecognition.approved).toBe(true);
-    expect(take(state, { type: 'setInitialRecognitionLines', lines: [] })).toBe(state);
-  });
-  it('preserves original intermediate posting lines through approval and history', () => {
-    let state = approveProceeds(createStudentState(generated(r1)));
-    const expected = calculateLoan(r1.input).proceeds.proceeds;
-    const original: StudentPostingLine[] = [
-      { account: '5820', side: 'D', amount: dk(expected.plus(100).toFixed(2)) },
-      { account: '5820', side: 'K', amount: '100' },
-      { account: '6320', side: 'K', amount: dk(expected.toFixed(2)) },
-    ];
-    state = take(state, { type: 'setInitialRecognitionLines', lines: original });
-    state = take(state, { type: 'checkInitialRecognition' });
-    expect(state.initialRecognition.lines).toEqual(original);
-    expect(state.initialRecognition.lines).not.toBe(original);
-    expect(state.currentStep).toBe('contractSchedule');
+  it('does not expose the former separate initial-recognition step', () => {
+    const state = approveProceeds(createStudentState(generated(r1)));
+    expect(state.currentStep).toBe('proceeds');
+    expect(take(state, { type: 'continueToNextStep' }).currentStep).toBe('contractSchedule');
+    expect(take(state, { type: 'viewHistoricalStep', step: 'initialRecognition' })).toBe(state);
   });
   it('requires schedule prerequisites before term one', () => {
-    const state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    const state = atSchedule(r1);
     expect(scheduleRowStatus(state, 1)).toBe('locked');
     expect(take(state, { type: 'editScheduleField', term: 1, field: 'nominalInterest', raw: '=1+1' })).toBe(state);
   });
   it('rejects literal term counts and accepts an equivalent manual formula', () => {
-    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    let state = atSchedule(r1);
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'principal', raw: '7000000' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'principal' });
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'termRate', raw: '=8%/1' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'termRate' });
     state = take(state, { type: 'editSchedulePrerequisite', field: 'termCount', raw: '4' });
     state = take(state, { type: 'checkSchedulePrerequisite', field: 'termCount' });
     expect(state.schedule.prerequisites.termCount).toMatchObject({ approved: false, errorCode: 'MISSING_EQUALS' });
@@ -248,7 +243,9 @@ describe('L5 student progression', () => {
     expect(state.schedule.prerequisites.termCount).toMatchObject({ approved: true, errorCode: null });
   });
   it('rejects literal term rates and accepts an equivalent manual formula', () => {
-    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    let state = atSchedule(r1);
+    state = take(state, { type: 'editSchedulePrerequisite', field: 'principal', raw: '7000000' });
+    state = take(state, { type: 'checkSchedulePrerequisite', field: 'principal' });
     state = take(state, { type: 'editSchedulePrerequisite', field: 'termRate', raw: '0,08' });
     state = take(state, { type: 'checkSchedulePrerequisite', field: 'termRate' });
     expect(state.schedule.prerequisites.termRate).toMatchObject({ approved: false, errorCode: 'MISSING_EQUALS' });
@@ -260,19 +257,19 @@ describe('L5 student progression', () => {
     expect(state.schedule.prerequisites.termRate).toMatchObject({ approved: true, errorCode: null });
   });
   it('blocks annuity payment calculation before prerequisites and on other loan types', () => {
-    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
+    let state = atSchedule(r1);
     expect(take(state, { type: 'calculateAnnuityPayment' })).toBe(state);
     state = take(state, { type: 'editSchedulePrerequisite', field: 'termCount', raw: '=4*1' });
     state = take(state, { type: 'checkSchedulePrerequisite', field: 'termCount' });
     expect(take(state, { type: 'calculateAnnuityPayment' })).toBe(state);
-    const serial = approveInitial(approveProceeds(createStudentState(generated(r3))));
-    const bullet = approveInitial(approveProceeds(createStudentState(generated(r6))));
+    const serial = atSchedule(r3);
+    const bullet = atSchedule(r6);
     expect(take(serial, { type: 'calculateAnnuityPayment' })).toBe(serial);
     expect(take(bullet, { type: 'calculateAnnuityPayment' })).toBe(bullet);
   });
   it('opens annuity row one only after the immutable payment action', () => {
-    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
-    for (const [field, raw] of [['termCount', '=4*1'], ['termRate', '=8%/1']] as const) {
+    let state = atSchedule(r1);
+    for (const [field, raw] of [['principal', '7000000'], ['termRate', '=8%/1'], ['termCount', '=4*1']] as const) {
       state = take(state, { type: 'editSchedulePrerequisite', field, raw });
       state = take(state, { type: 'checkSchedulePrerequisite', field });
     }
@@ -292,13 +289,13 @@ describe('L5 student progression', () => {
     expect(take(completed, { type: 'calculateAnnuityPayment' })).toBe(completed);
   });
   it('locks correct fields within an active row while wrong fields remain editable', () => {
-    let state = approveInitial(approveProceeds(createStudentState(generated(r1))));
-    for (const [field, raw] of [['termCount', '=4*1'], ['termRate', '=8%/1']] as const) {
+    let state = atSchedule(r1);
+    for (const [field, raw] of [['principal', '7000000'], ['termRate', '=8%/1'], ['termCount', '=4*1']] as const) {
       state = take(state, { type: 'editSchedulePrerequisite', field, raw });
       state = take(state, { type: 'checkSchedulePrerequisite', field });
     }
     state = take(state, { type: 'calculateAnnuityPayment' });
-    state = take(state, { type: 'editScheduleField', term: 1, field: 'openingPrincipal', raw: '=7.000.000+0' });
+    state = take(state, { type: 'editScheduleField', term: 1, field: 'openingPrincipal', raw: '7.000.000,00' });
     state = take(state, { type: 'editScheduleField', term: 1, field: 'nominalInterest', raw: '=1+1' });
     state = take(state, { type: 'checkScheduleRow', term: 1 });
     expect(state.schedule.rows[1]?.openingPrincipal?.approved).toBe(true);
@@ -344,7 +341,7 @@ describe('L5 student progression', () => {
     expect(state.effectiveInterest.rateCalculated).toBe(true);
   });
   it('orders income and balance subrows in terms one and two', () => {
-    let state = approveCashFlows(throughSchedule(r1));
+    let state = take(approveCashFlows(throughSchedule(r1)), { type: 'continueToNextStep' });
     expect(amortizationSubrowStatus(state, 1, 'income')).toBe('active');
     expect(amortizationSubrowStatus(state, 1, 'balance')).toBe('locked');
     expect(take(state, { type: 'editAmortizationField', term: 2, subtable: 'income', field: 'amortization', raw: '=1+1' })).toBe(state);
@@ -364,7 +361,7 @@ describe('L5 student progression', () => {
     expect(deriveStudentView(state).activeBookkeepingBlock).toBe('payment');
   });
   it('leaves every line editable after a wrong bookkeeping block', () => {
-    let state = throughAmortization(r1);
+    let state = take(throughClassification(r1), { type: 'continueToNextStep' });
     state = take(state, { type: 'setBookkeepingBlock', term: 1, block: 'payment', lines: [{ account: '4410', side: 'D', amount: '1' }] });
     state = take(state, { type: 'checkBookkeepingBlock', term: 1, block: 'payment' });
     expect(state.bookkeeping[1]?.payment.approved).toBe(false);
@@ -373,7 +370,7 @@ describe('L5 student progression', () => {
     expect(corrected.bookkeeping[1]?.payment.lines).toHaveLength(3);
   });
   it('locks the entire approved payment block', () => {
-    let state = throughAmortization(r1);
+    let state = take(throughClassification(r1), { type: 'continueToNextStep' });
     const event = calculateLoan(r1.input).postingEvents.find((entry) => entry.kind === 'payment')!;
     state = take(state, { type: 'setBookkeepingBlock', term: 1, block: 'payment', lines: lines(event.movements) });
     state = take(state, { type: 'checkBookkeepingBlock', term: 1, block: 'payment' });
@@ -384,10 +381,10 @@ describe('L5 student progression', () => {
     const state = throughBookkeeping(r3);
     expect(state.bookkeeping[1]?.amortization.approved).toBe(true);
     expect(state.bookkeeping[2]?.amortization.approved).toBe(true);
-    expect(state.currentStep).toBe('classification');
+    expect(state.currentStep).toBe('yearBookkeeping');
   });
   it('requires a reclassification block for positive short term debt', () => {
-    let state = throughBookkeeping(r1);
+    let state = atClassification(r1);
     const model = calculateLoan(r1.input);
     state = take(state, { type: 'editClassificationField', field: 'carryingAmount', raw: dk(model.classification.carryingAmount.toFixed(2)) });
     state = take(state, { type: 'checkClassificationField', field: 'carryingAmount' });
@@ -405,23 +402,21 @@ describe('L5 student progression', () => {
     expect(take(state, { type: 'setReclassificationAnswer', answer: 'no' })).toBe(state);
   });
   it('requires No and creates no zero posting when short term is zero', () => {
-    let state = throughBookkeeping(r6);
-    state = approveClassification(state);
+    const state = throughClassification(r6);
     expect(state.classification.reclassification.lines).toEqual([]);
     expect(state.classification.reclassificationAnswer).toBe('no');
-    expect(state.currentStep).toBe('completion');
+    expect(state.currentStep).toBe('classification');
   });
-  it('defers T-account balance calculation until step eight', () => {
+  it('creates final-balance data when classification explicitly continues to bookkeeping', () => {
     const initial = createStudentState(generated(r1));
     expect(initial.caseResult.accountBalances).toBeNull();
-    const booked = throughBookkeeping(r1);
-    expect(booked.caseResult.accountBalances).toBeNull();
-    const classified = approveClassification(booked);
-    expect(classified.currentStep).toBe('completion');
-    expect(classified.caseResult.accountBalances).not.toBeNull();
+    const classified = throughClassification(r1);
+    expect(classified.caseResult.accountBalances).toBeNull();
+    const bookkeeping = take(classified, { type: 'continueToNextStep' });
+    expect(bookkeeping.caseResult.accountBalances).not.toBeNull();
   });
   it('approves final balance accounts individually', () => {
-    let state = throughClassification(r1);
+    let state = throughCompletion(r1);
     const first = calculateLoan(r1.input).accountBalances[0]!;
     if (first.status !== 'balance') throw new Error('Fixture expected balance');
     state = take(state, { type: 'editFinalBalance', account: first.account, formula: formula(first.amount), side: first.side });
@@ -431,12 +426,12 @@ describe('L5 student progression', () => {
     expect(Object.values(state.completion.balances).some((entry) => !entry.approved)).toBe(true);
   });
   it('treats noBalance as read only without an =0 input', () => {
-    const state = throughClassification(r6);
+    const state = throughCompletion(r6);
     expect(state.completion.balances['6760']).toBeUndefined();
     expect(take(state, { type: 'editFinalBalance', account: '6760', formula: '=0+0' })).toBe(state);
   });
   it('can show 0, 1, 2, and 3 final checks without auto completion', () => {
-    let state = approveBalances(throughClassification(r1));
+    let state = approveBalances(throughCompletion(r1));
     expect(deriveStudentView(state).finalChecksPassed).toBe(0);
     state = take(state, { type: 'runFinalChecks', check: 'debtReconciles' });
     expect(deriveStudentView(state).finalChecksPassed).toBe(1);
@@ -447,7 +442,7 @@ describe('L5 student progression', () => {
     expect(state.sessionStatus).toBe('active');
   });
   it('completes only through explicit finishLevel1', () => {
-    let state = approveBalances(throughClassification(r1));
+    let state = approveBalances(throughCompletion(r1));
     state = take(state, { type: 'runFinalChecks' });
     state = take(state, { type: 'finishLevel1' });
     expect(state.sessionStatus).toBe('completed');
@@ -455,7 +450,7 @@ describe('L5 student progression', () => {
     expect(deriveCompletedSummary(state)?.proceeds).toBe('6590000.00');
   });
   it('makes all steps read only after completion', () => {
-    let state = approveBalances(throughClassification(r1));
+    let state = approveBalances(throughCompletion(r1));
     state = take(take(state, { type: 'runFinalChecks' }), { type: 'finishLevel1' });
     expect(canViewStep(state, 'proceeds')).toBe(true);
     expect(canEditStep(state, 'completion')).toBe(false);
@@ -500,7 +495,7 @@ describe('L5 student progression', () => {
     const historical = applyStudentAction(state, { type: 'viewHistoricalStep', step: 'proceeds' });
     expect(historical.currentStep).toBe('proceeds');
     state = applyStudentAction(state, { type: 'continueToNextStep' });
-    expect(state.currentStep).toBe('initialRecognition');
-    expect(state.viewingStep).toBe('initialRecognition');
+    expect(state.currentStep).toBe('contractSchedule');
+    expect(state.viewingStep).toBe('contractSchedule');
   });
 });

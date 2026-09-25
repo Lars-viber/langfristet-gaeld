@@ -37,7 +37,7 @@ describe('L7 shell structure', () => {
     const historyHtml = render(historical);
     expect(historyHtml).toContain('Du ser et tidligere trin');
     expect(historyHtml).toContain('Tilbage til aktuelt trin');
-    expect(historyHtml).toContain('Kun visning');
+    expect(historyHtml).toContain('Trinnet er skrivebeskyttet.');
     const completed: StudentState = {
       ...base, currentStep: 'completion', viewingStep: 'completion',
       completedSteps: [...STUDENT_STEPS], sessionStatus: 'completed',

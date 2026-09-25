@@ -14,8 +14,7 @@ import { r6 } from '../fixtures/r6';
 import type { GoldenFixture } from '../fixtures/types';
 
 const take = (state: StudentState, action: StudentAction) => {
-  const next = applyStudentAction(state, action);
-  return next.sessionStatus === 'active' && next.viewingStep === next.currentStep && next.completedSteps.includes(next.currentStep) ? applyStudentAction(next, { type: 'continueToNextStep' }) : next;
+  return applyStudentAction(state, action);
 };
 const dk = (value: string) => value.replace('.', ',');
 const formula = (value: { toFixed(scale: number): string }) => `=${dk(value.toFixed(2))}+0`;
@@ -24,7 +23,7 @@ const renderCompletion = (state: StudentState) => renderToStaticMarkup(createEle
 
 function atClassification(fixture: GoldenFixture): StudentState {
   const state = createStudentState({ generatorVersion: '1.0.0', seed: 91, loanType: fixture.input.loanType, attempts: 1, caseInput: fixture.input });
-  return { ...state, currentStep: 'classification', viewingStep: 'classification', completedSteps: [...STUDENT_STEPS.slice(0, 6)] };
+  return { ...state, currentStep: 'classification', viewingStep: 'classification', completedSteps: [...STUDENT_STEPS.slice(0, 4)] };
 }
 
 function throughUpcoming(state: StudentState): StudentState {
@@ -61,6 +60,12 @@ function throughClassification(fixture: GoldenFixture): StudentState {
   }
   state = take(state, { type: 'setReclassificationAnswer', answer: 'no' });
   return take(state, { type: 'checkReclassificationAnswer' });
+}
+
+function atCompletion(fixture: GoldenFixture): StudentState {
+  const bookkeeping = take(throughClassification(fixture), { type: 'continueToNextStep' });
+  return { ...bookkeeping, currentStep: 'completion', viewingStep: 'completion',
+    completedSteps: [...STUDENT_STEPS.slice(0, 6)] };
 }
 
 function approveBalances(state: StudentState): StudentState {
@@ -123,13 +128,13 @@ describe('L8D classification and completion', () => {
     expect(renderClassification(state)).toContain('Beregningen stemmer ikke endnu.');
     state = take(state, { type: 'setReclassificationAnswer', answer: 'no' });
     state = take(state, { type: 'checkReclassificationAnswer' });
-    expect(state.currentStep).toBe('completion');
+    expect(state.currentStep).toBe('classification');
     expect(state.classification.reclassification.lines).toEqual([]);
     expect(state.caseResult.postingEvents.some((event) => event.kind === 'reclassification')).toBe(false);
   });
 
   it('shows noBalance read-only and creates final balances only in step eight', () => {
-    const state = throughClassification(r6);
+    const state = atCompletion(r6);
     expect(state.caseResult.accountBalances).not.toBeNull();
     expect(state.completion.balances['6760']).toBeUndefined();
     const html = renderCompletion(state);
@@ -139,7 +144,7 @@ describe('L8D classification and completion', () => {
   });
 
   it('requires both an equals formula and a separate correct D/K choice', () => {
-    let state = throughClassification(r1);
+    let state = atCompletion(r1);
     const expected = calculateLoan(r1.input).accountBalances.find((entry) => entry.account === '4410')!;
     if (expected.status !== 'balance') throw new Error('Expected 4410 balance');
     state = take(state, { type: 'editFinalBalance', account: '4410', formula: dk(expected.amount.toFixed(2)), side: expected.side });
@@ -155,7 +160,7 @@ describe('L8D classification and completion', () => {
   });
 
   it('keeps A/B/C separate and leaves 3 of 3 active until the learner finishes', () => {
-    let state = throughClassification(r1);
+    let state = atCompletion(r1);
     expect(take(state, { type: 'runFinalChecks' })).toBe(state);
     state = approveBalances(state);
     expect(renderCompletion(state)).toContain('0 af 3 kontroller korrekte');
@@ -165,11 +170,11 @@ describe('L8D classification and completion', () => {
     expect(renderCompletion(state)).toContain('3 af 3 kontroller korrekte');
     expect(renderCompletion(state)).toContain('Afslut Niveau 1');
     expect(state.sessionStatus).toBe('active');
-    expect(state.completedSteps).toHaveLength(7);
+    expect(state.completedSteps).toHaveLength(6);
   });
 
   it('shows the completed summary and keeps the finished work read-only', () => {
-    let state = approveBalances(throughClassification(r1));
+    let state = approveBalances(atCompletion(r1));
     state = take(state, { type: 'runFinalChecks' });
     state = take(state, { type: 'finishLevel1' });
     const shell = renderToStaticMarkup(createElement(AppShell, { state, onAction: () => {}, onReset: () => {}, onNewCase: () => {} }));
@@ -185,7 +190,7 @@ describe('L8D classification and completion', () => {
   });
 
   it('restores formulas, posting lines, checks, and completed state from persistence', () => {
-    let state = approveBalances(throughClassification(r1));
+    let state = approveBalances(atCompletion(r1));
     state = take(state, { type: 'runFinalChecks' });
     state = take(state, { type: 'finishLevel1' });
     const adapter = createMemorySessionStorage();

@@ -134,7 +134,7 @@ const scheduleState: Reader = (value) => {
   const compatible = Object.hasOwn(value, 'annuityPaymentCalculated')
     ? value : { ...value, annuityPaymentCalculated: false };
   return object({
-    prerequisites: partial(['termCount', 'termRate', 'fixedRepayment'], field),
+    prerequisites: partial(['principal', 'termCount', 'termRate', 'fixedRepayment'], field),
     annuityPaymentCalculated: bool,
     rows: terms(partial(['openingPrincipal', 'payment', 'nominalInterest', 'principalRepayment', 'closingPrincipal'], field)),
     approvedTerms: array(integer(1, 20)), remainingCalculated: bool,

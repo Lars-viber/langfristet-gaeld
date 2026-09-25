@@ -1,8 +1,9 @@
 import type { StudentState } from '../student';
 
-export const PERSISTENCE_SCHEMA_VERSION = 1;
+export const PERSISTENCE_SCHEMA_VERSION = 2;
 export const RULESET_VERSION = '1.0.0';
-export const SESSION_STORAGE_KEY = 'langfristet-gaeld:level1:session:v1';
+export const SESSION_STORAGE_KEY = 'langfristet-gaeld:level1:session:v2';
+export const LEGACY_SESSION_STORAGE_KEY = 'langfristet-gaeld:level1:session:v1';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type PersistenceErrorCode =

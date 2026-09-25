@@ -46,7 +46,9 @@ export function amortizationSubrowStatus(state: StudentState, term: number, subt
   return state.currentStep === 'amortizedCost' && term === activeTerm && subtable === activeSubtable ? 'active' : 'locked';
 }
 export function prerequisitesApproved(state: StudentState): boolean {
-  const required = state.generatedCase.loanType === 'serial' ? ['termCount', 'termRate', 'fixedRepayment'] : ['termCount', 'termRate'];
+  const required = state.generatedCase.loanType === 'serial'
+    ? ['principal', 'termCount', 'termRate', 'fixedRepayment']
+    : ['principal', 'termCount', 'termRate'];
   return required.every((field) => state.schedule.prerequisites[field as keyof typeof state.schedule.prerequisites]?.approved);
 }
 export function canCalculateAnnuityPayment(state: StudentState): boolean {

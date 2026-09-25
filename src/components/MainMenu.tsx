@@ -10,7 +10,7 @@ const loanOptions: { type: LoanType; cue: string; symbol: string }[] = [
 ];
 
 interface MainMenuProps {
-  mode: 'menu' | 'resume' | 'corrupt';
+  mode: 'menu' | 'resume' | 'corrupt' | 'legacy';
   restorable?: StudentState;
   onStart(loanType: LoanType): void;
   onContinue(): void;
@@ -58,6 +58,11 @@ export function MainMenu({ mode, restorable, onStart, onContinue, onNewCase }: M
             </div>
           </div>
         </section>
+      ) : mode === 'legacy' ? (
+        <section className="menu-section" aria-labelledby="legacy-title"><div className="recovery-card" role="status"><span className="recovery-mark" aria-hidden="true">!</span><div>
+          <h2 id="legacy-title">Opgaven er blevet opdateret</h2><p>Forløbet og bogføringen er ændret, så en tidligere gemt opgave kan ikke fortsættes sikkert. Start en ny opgave for at arbejde med den opdaterede version.</p>
+          <button className="button button-primary" type="button" onClick={onNewCase}>Start ny opgave</button>
+        </div></div></section>
       ) : mode === 'corrupt' ? (
         <section className="menu-section" aria-labelledby="corrupt-title">
           <div className="recovery-card" role="alert">

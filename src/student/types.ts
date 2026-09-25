@@ -2,19 +2,20 @@ import type { AccountBalance, AccountNumber, LoanResult, LoanType } from '../dom
 import type { GeneratedLevel1Case } from '../generator';
 import type { DebitCreditSide, StudentPostingLine, ValidationErrorCode } from '../validation';
 
-export const STUDENT_STATE_VERSION = 1;
+export const STUDENT_STATE_VERSION = 2;
 export const STUDENT_STEPS = [
-  'proceeds', 'initialRecognition', 'contractSchedule', 'effectiveInterest',
-  'amortizedCost', 'yearBookkeeping', 'classification', 'completion',
+  'proceeds', 'contractSchedule', 'effectiveInterest', 'amortizedCost',
+  'classification', 'yearBookkeeping', 'completion', 'finalOverview',
 ] as const;
-export type StudentStep = typeof STUDENT_STEPS[number];
+/** initialRecognition is retained only as internal future bookkeeping state, never as a visible step. */
+export type StudentStep = typeof STUDENT_STEPS[number] | 'initialRecognition';
 export type StepStatus = 'current' | 'completed' | 'locked';
 export type RowStatus = 'locked' | 'active' | 'approved' | 'appCalculated';
 export type ScheduleField = 'openingPrincipal' | 'payment' | 'nominalInterest' | 'principalRepayment' | 'closingPrincipal';
 export type IncomeField = 'nominalInterest' | 'amortization' | 'totalInterestExpense';
 export type BalanceField = 'openingCarryingAmount' | 'principalRepayment' | 'amortization' | 'closingCarryingAmount';
 export type ProceedsField = 'variableCost' | 'marketValue' | 'brokerage' | 'proceeds';
-export type SchedulePrerequisite = 'termCount' | 'termRate' | 'fixedRepayment';
+export type SchedulePrerequisite = 'principal' | 'termCount' | 'termRate' | 'fixedRepayment';
 export type ClassificationField = 'carryingAmount' | 'shortTerm' | 'longTerm';
 export type FinalCheck = 'debtReconciles' | 'financialExpenseReconciles' | 'accountsReconcile';
 
