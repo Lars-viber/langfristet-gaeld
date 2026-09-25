@@ -18,7 +18,11 @@ import type { GoldenFixture } from '../fixtures/types';
 function generated(fixture: GoldenFixture, seed = 1): GeneratedLevel1Case {
   return { generatorVersion: '1.0.0', seed, loanType: fixture.input.loanType, attempts: 1, caseInput: fixture.input };
 }
-function take(state: StudentState, action: StudentAction): StudentState { return applyStudentAction(state, action); }
+function take(state: StudentState, action: StudentAction): StudentState {
+  const next = applyStudentAction(state, action);
+  return next.sessionStatus === 'active' && next.viewingStep === next.currentStep && next.completedSteps.includes(next.currentStep)
+    ? applyStudentAction(next, { type: 'continueToNextStep' }) : next;
+}
 function dk(value: string): string { return value.replace('.', ','); }
 function formula(value: { toFixed(scale: number): string }): string { return `=${dk(value.toFixed(2))}+0`; }
 function lines(movements: readonly NetMovement[]): StudentPostingLine[] {
@@ -482,5 +486,21 @@ describe('L5 student progression', () => {
     take(edited, { type: 'checkProceedsField', field: 'variableCost' });
     expect(JSON.stringify(original)).toBe(before);
     expect(original.proceeds).toEqual({});
+  });
+
+  it('keeps a completed Step 1 current until an explicit continue action', () => {
+    let state = createStudentState(generated(r1));
+    const model = calculateLoan(state.generatedCase.caseInput);
+    state = applyStudentAction(state, { type: 'editProceedsFormula', field: 'variableCost', raw: formula(model.proceeds.financingType === 'bank' ? model.proceeds.variableCost : model.proceeds.proceeds) });
+    state = applyStudentAction(state, { type: 'checkProceedsField', field: 'variableCost' });
+    state = applyStudentAction(state, { type: 'editProceedsFormula', field: 'proceeds', raw: formula(model.proceeds.proceeds) });
+    state = applyStudentAction(state, { type: 'checkProceedsField', field: 'proceeds' });
+    expect(state.currentStep).toBe('proceeds');
+    expect(state.completedSteps).toContain('proceeds');
+    const historical = applyStudentAction(state, { type: 'viewHistoricalStep', step: 'proceeds' });
+    expect(historical.currentStep).toBe('proceeds');
+    state = applyStudentAction(state, { type: 'continueToNextStep' });
+    expect(state.currentStep).toBe('initialRecognition');
+    expect(state.viewingStep).toBe('initialRecognition');
   });
 });

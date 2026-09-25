@@ -14,6 +14,10 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
   const step = state.viewingStep;
   const copy = STEP_COPY[step];
   const readOnly = !canEditStep(state, step);
+  const steps = Object.keys(STEP_COPY) as (keyof typeof STEP_COPY)[];
+  const nextStep = steps[steps.indexOf(step) + 1];
+  const canContinue = state.sessionStatus === 'active' && state.viewingStep === state.currentStep
+    && state.completedSteps.includes(step) && nextStep !== undefined;
   return (
     <section className="step-shell card" aria-labelledby="step-heading">
       <div className="step-heading">
@@ -40,6 +44,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
             <p>Her får du plads til beregninger og bogføring.</p>
           </div>
         </div>}
+      {canContinue && <div className="step-continue"><span>Trinnet er godkendt. Du vælger selv, hvornår du fortsætter.</span><button className="button button-primary" type="button" onClick={() => onAction({ type: 'continueToNextStep' })}>Fortsæt til {STEP_COPY[nextStep].title}</button></div>}
     </section>
   );
 }

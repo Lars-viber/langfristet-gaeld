@@ -237,6 +237,48 @@
   .row-action .button { width: 100%; }
   .schedule-work .table-scroll, .interest-work .table-scroll { margin-right: -.6rem; padding-right: .6rem; }
 }
+
+/* R1: compact laptop-first work shell. */
+.menu-intro h1, .workspace-top h1, .section-heading h2, .case-header-title h2,
+.step-heading h2, .work-card-heading h3, .work-area h3, .completed-summary h2,
+.resume-card h3, .recovery-card h2, .brand-mark, .step-number-large, .calculation-sign,
+.posting-index, .effective-rate { font-family: "Segoe UI", system-ui, sans-serif; }
+.app-layout { max-width: 1366px; padding: 1.2rem 1.5rem 2.5rem; }
+.workspace-top { align-items: center; margin-bottom: .8rem; }
+.workspace-top h1 { font-size: clamp(1.5rem, 2.4vw, 2rem); font-weight: 700; letter-spacing: 0; }
+.case-overview { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(460px, .9fr); gap: 1rem; align-items: stretch; }
+.task-introduction, .case-header { margin: 0; padding: 1rem 1.1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow); }
+.task-introduction h2, .case-header-title h2 { margin: 0 0 .4rem; color: var(--primary-strong); font-size: 1.2rem; font-weight: 750; }
+.task-introduction p:last-child { color: var(--text-muted); font-size: .87rem; line-height: 1.45; }
+.case-header-title { padding-bottom: .6rem; }
+.case-details { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem .8rem; margin-top: .7rem; }
+.case-details dt { font-size: .68rem; }
+.case-details dd { font-size: .83rem; }
+.progress-wrap { margin: 1rem 0; }
+.progress-head { margin-bottom: .4rem; }
+.progress-list { gap: .35rem; padding: 0 0 .25rem; }
+.progress-list li { flex: 1 0 108px; min-width: 108px; }
+.progress-step { min-height: 48px; gap: .4rem; padding: .42rem; border-radius: var(--radius-sm); }
+.progress-number { flex-basis: 24px; height: 24px; font-size: .72rem; }
+.progress-copy strong { font-size: .69rem; }.progress-copy small { margin-top: .08rem; font-size: .6rem; }
+.progress-step.status-current { background: var(--primary-light, var(--accent-soft)); color: var(--primary-strong); border-color: var(--primary); }
+.progress-step.status-current .progress-number { background: var(--primary); color: white; }
+.progress-step.is-viewing { outline-color: var(--primary); }
+.step-shell { padding: 1rem 1.1rem; }
+.step-heading { gap: .75rem; }.step-number-large { flex-basis: 42px; height: 42px; border-radius: var(--radius-sm); font-size: 1rem; font-weight: 800; }
+.step-heading h2 { font-size: clamp(1.25rem, 2vw, 1.6rem); font-weight: 750; }.step-heading p:last-child { font-size: .88rem; }
+.step-work { margin-top: 1rem; }.proceeds-work { display: grid; grid-template-columns: minmax(220px, .65fr) minmax(0, 1.35fr); gap: 1rem; align-items: start; }
+.proceeds-reference { padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-muted); }
+.proceeds-reference h3 { margin: 0 0 .5rem; color: var(--primary-strong); font-size: 1.1rem; }.proceeds-reference p { color: var(--text-muted); font-size: .86rem; }.proceeds-reference p + p { margin-top: 1rem; }
+.work-card { max-width: none; padding: 1rem 1.1rem; border-radius: var(--radius-md); }.work-card-heading { padding-bottom: .7rem; }.work-card-heading h3 { font-size: 1.3rem; font-weight: 750; }
+.calculation-help { margin: .75rem 0; padding: .55rem .75rem; border-left-color: var(--primary); background: var(--accent-soft); font-size: .82rem; }
+.calculation-row { grid-template-columns: 1.7rem minmax(0, 1fr); gap: .5rem; padding: .65rem .2rem; }.given-row { grid-template-columns: 1.7rem minmax(0, 1fr) minmax(130px, auto); }.calculation-sign { font-size: 1.2rem; font-weight: 700; }.given-detail { padding: .35rem .2rem .35rem 2.4rem; }
+.field-action { display: inline-flex; align-items: center; margin: .25rem 0 0; padding: .12rem .38rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-muted); color: var(--text-muted); font-size: .66rem; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+.field-action-beregn { border-color: #C3D7EB; background: #EDF4FC; color: var(--primary-strong); }.field-action-oplyst { background: #fff; }.manual-field label { margin-bottom: .3rem; }.manual-field input { min-height: 40px; }.approved-mark { min-height: 32px; border: 1px solid #8CBDAB; background: #F0F8F4; }
+.approved-result { display: flex; justify-content: space-between; gap: .6rem; margin-top: .35rem; padding: .35rem .5rem; border: 1px solid #8CBDAB; border-radius: 5px; background: #F0F8F4; font-size: .78rem; }.approved-result span { color: var(--text-muted); }.approved-result strong { color: var(--success); font-variant-numeric: tabular-nums; }
+.continue-panel, .step-continue { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-top: 1rem; padding: .75rem .9rem; border: 1px solid #8CBDAB; border-radius: var(--radius-sm); background: #F0F8F4; color: var(--success); font-size: .84rem; }.step-continue { color: var(--text); }.step-continue span { color: var(--text-muted); }
+@media (max-width: 760px) { .case-overview, .proceeds-work { grid-template-columns: minmax(0, 1fr); }.case-details { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 500px) { .app-layout { padding: 1rem .75rem 2rem; }.case-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }.workspace-actions { width: 100%; }.workspace-actions .button { flex: 1; }.given-row { grid-template-columns: 1.7rem minmax(0, 1fr); }.given-row strong { grid-column: 2; }.step-continue, .continue-panel { align-items: stretch; flex-direction: column; }.step-continue .button { width: 100%; } }
 .schedule-work, .interest-work { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .schedule-work .work-card, .interest-work .work-card, .schedule-work .table-scroll, .interest-work .table-scroll { width: 100%; min-width: 0; }
 @media (max-width: 620px) {
@@ -319,3 +361,11 @@
   .final-check, .finish-action { align-items: stretch; flex-direction: column; }
   .balance-controls .button, .repayment-controls .button { flex: 1 1 100%; }
 }
+
+/* R1 final shell overrides: no landing-page hero treatment. */
+.menu-page { max-width: 1366px; padding: 1.25rem 1.5rem 2.5rem; }
+.menu-intro { grid-template-columns: minmax(0, 1fr) minmax(280px, .55fr); gap: 1rem; align-items: center; }
+.menu-intro-copy { padding: .4rem 0; }.menu-intro h1 { max-width: none; margin-bottom: .55rem; font-family: "Segoe UI", system-ui, sans-serif; font-size: clamp(1.8rem, 3.4vw, 2.55rem); font-weight: 750; letter-spacing: -.025em; line-height: 1.1; }.menu-intro h1 em { display: inline; color: var(--primary); font-style: normal; }.lead { max-width: 48rem; margin-bottom: .5rem; font-size: 1rem; }.intro-note { max-width: 48rem; font-size: .88rem; }
+.intro-aside { min-height: 0; padding: 1rem; border-radius: var(--radius-md); }.aside-index { color: var(--primary-light); font-family: "Segoe UI", system-ui, sans-serif; font-size: 1.1rem; font-weight: 800; }.intro-aside strong { margin-top: .8rem; font-family: "Segoe UI", system-ui, sans-serif; font-size: 1rem; font-weight: 750; }.intro-aside p { margin-top: .35rem; font-size: .8rem; }.aside-decoration { right: 1rem; top: 1rem; height: 34px; }.aside-decoration span { width: 6px; height: 15px; }.aside-decoration span:nth-child(2) { height: 21px; }.aside-decoration span:nth-child(3) { height: 27px; }.aside-decoration span:nth-child(4) { height: 33px; }
+.section-heading h2, .resume-card h3, .recovery-card h2, .completed-summary h2 { font-family: "Segoe UI", system-ui, sans-serif; font-weight: 750; }
+@media (max-width: 620px) { .menu-page { padding: 1rem .75rem 2rem; }.menu-intro { grid-template-columns: minmax(0, 1fr); }.menu-intro h1 { font-size: 2rem; }.intro-aside { display: none; } }

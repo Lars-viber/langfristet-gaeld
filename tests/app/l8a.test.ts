@@ -16,7 +16,10 @@ function fresh(fixture: typeof r1 | typeof r2): StudentState {
     attempts: 1, caseInput: fixture.input,
   });
 }
-const take = (state: StudentState, action: StudentAction) => applyStudentAction(state, action);
+const take = (state: StudentState, action: StudentAction) => {
+  const next = applyStudentAction(state, action);
+  return next.sessionStatus === 'active' && next.viewingStep === next.currentStep && next.completedSteps.includes(next.currentStep) ? applyStudentAction(next, { type: 'continueToNextStep' }) : next;
+};
 const render = (state: StudentState) => renderToStaticMarkup(createElement(AppShell, {
   state, onAction: () => {}, onReset: () => {}, onNewCase: () => {},
 }));
@@ -165,6 +168,7 @@ describe('L8A proceeds and initial recognition', () => {
     if (loaded.status !== 'restored') throw new Error('Restore failed');
     expect(loaded.state.initialRecognition.lines).toEqual(state.initialRecognition.lines);
     state = transitionStudentSession(adapter, loaded.state, { type: 'checkInitialRecognition' }).state;
+    state = transitionStudentSession(adapter, state, { type: 'continueToNextStep' }).state;
     expect(state.currentStep).toBe('contractSchedule');
     for (const step of ['proceeds', 'initialRecognition'] as const) {
       const history = take(state, { type: 'viewHistoricalStep', step });

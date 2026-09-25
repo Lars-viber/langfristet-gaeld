@@ -13,7 +13,10 @@ import { r1 } from '../fixtures/r1';
 import { r6 } from '../fixtures/r6';
 import type { GoldenFixture } from '../fixtures/types';
 
-const take = (state: StudentState, action: StudentAction) => applyStudentAction(state, action);
+const take = (state: StudentState, action: StudentAction) => {
+  const next = applyStudentAction(state, action);
+  return next.sessionStatus === 'active' && next.viewingStep === next.currentStep && next.completedSteps.includes(next.currentStep) ? applyStudentAction(next, { type: 'continueToNextStep' }) : next;
+};
 const dk = (value: string) => value.replace('.', ',');
 const formula = (value: { toFixed(scale: number): string }) => `=${dk(value.toFixed(2))}+0`;
 const renderClassification = (state: StudentState) => renderToStaticMarkup(createElement(ClassificationStep, { state, onAction: () => {}, readOnly: state.currentStep !== 'classification' || state.sessionStatus === 'completed' }));

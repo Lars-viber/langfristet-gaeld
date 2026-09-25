@@ -123,6 +123,7 @@ export type StudentAction =
   | { type: 'checkFinalBalance'; account: AccountNumber }
   | { type: 'runFinalChecks'; check?: FinalCheck }
   | { type: 'finishLevel1' }
+  | { type: 'continueToNextStep' }
   | { type: 'viewHistoricalStep'; step: StudentStep }
   | { type: 'returnToCurrentStep' }
   | { type: 'resetCurrentCase' }

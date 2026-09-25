@@ -67,7 +67,11 @@ function copy(state: StudentState): StudentState {
   const { generatedCase, caseResult, ...studentData } = state;
   return { ...JSON.parse(JSON.stringify(studentData)) as Omit<StudentState, 'generatedCase' | 'caseResult'>, generatedCase, caseResult };
 }
-function advance(state: StudentState): void {
+function completeStep(state: StudentState): void {
+  if (!state.completedSteps.includes(state.currentStep)) state.completedSteps.push(state.currentStep);
+}
+function continueToNextStep(state: StudentState): void {
+  if (!state.completedSteps.includes(state.currentStep)) return;
   const index = STUDENT_STEPS.indexOf(state.currentStep);
   if (index >= STUDENT_STEPS.length - 1) return;
   if (state.currentStep === 'classification') {
@@ -77,7 +81,6 @@ function advance(state: StudentState): void {
       if (expected.status === 'balance') state.completion.balances[expected.account] = { ...field(), side: null };
     }
   }
-  state.completedSteps.push(state.currentStep);
   state.currentStep = STUDENT_STEPS[index + 1]!;
   state.viewingStep = state.currentStep;
 }
@@ -114,7 +117,7 @@ function nextBookkeepingTerm(state: StudentState, result: StudentCaseResult): nu
   return result.actual2026Terms.map((row) => row.term).find((term) => !state.bookkeeping[term]?.amortization.approved);
 }
 function completeBookkeepingIfDone(state: StudentState, result: StudentCaseResult): void {
-  if (nextBookkeepingTerm(state, result) === undefined) advance(state);
+  if (nextBookkeepingTerm(state, result) === undefined) completeStep(state);
 }
 function allowed(state: StudentState, step: StudentStep): boolean { return canEditStep(state, step); }
 
@@ -128,6 +131,10 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
   if (action.type === 'returnToCurrentStep') {
     if (state.viewingStep === state.currentStep) return state;
     const next = copy(state); next.viewingStep = state.currentStep; return next;
+  }
+  if (action.type === 'continueToNextStep') {
+    if (state.viewingStep !== state.currentStep) return state;
+    const next = copy(state); continueToNextStep(next); return next;
   }
   if (state.sessionStatus === 'completed') return state;
 
@@ -146,7 +153,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
         : action.field === 'brokerage' && result.proceeds.financingType === 'bond' ? result.proceeds.brokerage : null;
       if (!expected) return state;
       storeCheck(target, validateManualCalculation(target.raw, { expected, requirePositive: true, feedbackContext: action.field === 'brokerage' ? 'brokerage' : 'default' }));
-      if (proceedsOrder(next).every((key) => next.proceeds[key]?.approved)) advance(next);
+      if (proceedsOrder(next).every((key) => next.proceeds[key]?.approved)) completeStep(next);
       return next;
     }
     case 'setInitialRecognitionLines': {
@@ -159,7 +166,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       const next = copy(state); const expected = calculatedResult(state).postingEvents.find((event) => event.kind === 'origination');
       if (!expected) return state;
       storeBlockCheck(next.initialRecognition, validatePostingBlock(next.initialRecognition.lines, expected.movements));
-      if (next.initialRecognition.approved) advance(next);
+      if (next.initialRecognition.approved) completeStep(next);
       return next;
     }
     case 'editSchedulePrerequisite': {
@@ -201,7 +208,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       if (!allowed(state, 'contractSchedule') || state.schedule.remainingCalculated) return state;
       const count = state.generatedCase.caseInput.years * state.generatedCase.caseInput.paymentsPerYear;
       if (!manualTerms(state.generatedCase.loanType, count).every((term) => state.schedule.approvedTerms.includes(term))) return state;
-      const next = copy(state); next.schedule.remainingCalculated = true; advance(next); return next;
+      const next = copy(state); next.schedule.remainingCalculated = true; completeStep(next); return next;
     }
     case 'editCashFlowRow': {
       if (!allowed(state, 'effectiveInterest') || cashFlowRowStatus(state, action.term) !== 'active') return state;
@@ -228,7 +235,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
     }
     case 'calculateEffectiveRate': {
       if (!allowed(state, 'effectiveInterest') || !state.effectiveInterest.remainingCalculated || state.effectiveInterest.rateCalculated) return state;
-      const next = copy(state); next.effectiveInterest.rateCalculated = true; advance(next); return next;
+      const next = copy(state); next.effectiveInterest.rateCalculated = true; completeStep(next); return next;
     }
     case 'editAmortizationField': {
       if (!allowed(state, 'amortizedCost') || amortizationSubrowStatus(state, action.term, action.subtable) !== 'active') return state;
@@ -258,7 +265,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
     }
     case 'calculateRemainingAmortization': {
       if (!allowed(state, 'amortizedCost') || state.amortization.remainingCalculated || !state.amortization.terms[1]?.approved || !state.amortization.terms[2]?.approved) return state;
-      const next = copy(state); next.amortization.remainingCalculated = true; advance(next); return next;
+      const next = copy(state); next.amortization.remainingCalculated = true; completeStep(next); return next;
     }
     case 'setBookkeepingBlock': {
       if (!allowed(state, 'yearBookkeeping')) return state;
@@ -317,7 +324,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       if (!expected) return state;
       const next = copy(state); const target = next.classification.reclassification;
       storeBlockCheck(target, validatePostingBlock(target.lines, expected.movements));
-      if (target.approved) advance(next);
+      if (target.approved) completeStep(next);
       return next;
     }
     case 'setReclassificationAnswer': {
@@ -327,7 +334,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
     case 'checkReclassificationAnswer': {
       if (!allowed(state, 'classification') || classificationStage(state) !== 'noReclassification') return state;
       const next = copy(state);
-      if (next.classification.reclassificationAnswer === 'no') advance(next);
+      if (next.classification.reclassificationAnswer === 'no') completeStep(next);
       else next.classification.answerErrorCode = 'WRONG_RESULT';
       return next;
     }

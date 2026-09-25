@@ -12,7 +12,10 @@ import { r3 } from '../fixtures/r3';
 import { r5 } from '../fixtures/r5';
 import type { GoldenFixture } from '../fixtures/types';
 
-const take = (state: StudentState, action: StudentAction) => applyStudentAction(state, action);
+const take = (state: StudentState, action: StudentAction) => {
+  const next = applyStudentAction(state, action);
+  return next.sessionStatus === 'active' && next.viewingStep === next.currentStep && next.completedSteps.includes(next.currentStep) ? applyStudentAction(next, { type: 'continueToNextStep' }) : next;
+};
 const render = (state: StudentState) => renderToStaticMarkup(createElement(AppShell, {
   state, onAction: () => {}, onReset: () => {}, onNewCase: () => {},
 }));
