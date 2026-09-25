@@ -59,7 +59,7 @@ export function AppShell({ state, onAction, onReset, onNewCase }: AppShellProps)
         <button className="button button-primary" type="button" onClick={() => setShowCompletedWork(true)}>Se afsluttet opgave</button>
       </section>}
       {showWork && <>
-        {historical && <HistoricalBanner onReturn={() => onAction({ type: 'returnToCurrentStep' })} />}
+        {historical && state.viewingStep !== 'contractSchedule' && <HistoricalBanner onReturn={() => onAction({ type: 'returnToCurrentStep' })} />}
         <StepShell state={state} onAction={onAction} />
       </>}
     </main>

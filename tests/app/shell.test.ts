@@ -38,6 +38,9 @@ describe('L7 shell structure', () => {
     expect(historyHtml).toContain('Du ser et tidligere trin');
     expect(historyHtml).toContain('Tilbage til aktuelt trin');
     expect(historyHtml).toContain('Trinnet er skrivebeskyttet.');
+    expect(historyHtml).not.toContain('historical-banner');
+    expect(historyHtml).toMatch(/class="schedule-reference"[^>]*>[\s\S]*Tilbage til aktuelt trin[\s\S]*<\/aside>/);
+    expect(historyHtml).not.toContain('Fortsæt til Effektiv rente');
     const completed: StudentState = {
       ...base, currentStep: 'completion', viewingStep: 'completion',
       completedSteps: [...STUDENT_STEPS], sessionStatus: 'completed',
