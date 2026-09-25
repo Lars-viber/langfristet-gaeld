@@ -33,9 +33,9 @@ export function ManualCalculationField({
           readOnly={locked} disabled={waiting} aria-invalid={field?.errorCode ? true : undefined}
           aria-describedby={field?.errorCode ? feedbackId : undefined} />
         {!locked && <button className="button button-primary" type="submit" disabled={!active}>Kontrollér</button>}
-        {approved && <span className="approved-mark" role="status">✓ Godkendt</span>}
+        {approved && approvedResult && <output className="approved-result">{approvedResult}</output>}
+        {approved && <span className="approved-mark" role="status" aria-label="Godkendt" title="Godkendt">✓</span>}
       </div>
-      {approved && approvedResult && <div className="approved-result"><span>Resultat</span><strong>{approvedResult}</strong></div>}
       <ValidationMessage code={field?.errorCode ?? null} id={feedbackId} context={feedbackContext} />
     </form>
   );

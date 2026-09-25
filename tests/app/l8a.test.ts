@@ -69,7 +69,7 @@ describe('L8A proceeds and initial recognition', () => {
     expect(state.proceeds.variableCost?.approved).toBe(true);
     expect(state.proceeds.variableCost?.raw).toBe('=7.000.000*3%');
     expect(render(state)).toContain('value=\"=7.000.000*3%\"');
-    expect(render(state)).toContain('✓ Godkendt');
+    expect(render(state)).toContain('aria-label="Godkendt"');
     state = checkFormula(state, 'proceeds', '=7.000.000-210.000-200.000');
     expect(state.currentStep).toBe('initialRecognition');
     expect(render(state)).toContain('Bogfør lånets optagelse.');

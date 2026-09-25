@@ -25,6 +25,7 @@ export function AppShell({ state, onAction, onReset, onNewCase }: AppShellProps)
   };
   return (
     <main id="main-content" className="app-layout">
+      <div className="workspace-flow-header">
       <div className="workspace-top">
         <div>
           <p className="eyebrow">Langfristet gæld · Niveau 1</p>
@@ -34,6 +35,8 @@ export function AppShell({ state, onAction, onReset, onNewCase }: AppShellProps)
           <button className="button button-text" type="button" onClick={onReset}>Start opgaven forfra</button>
           <button className="button button-secondary" type="button" onClick={onNewCase}>Ny opgave</button>
         </div>
+      </div>
+      <ProgressNav state={state} onAction={onAction} />
       </div>
       <div className="case-overview">
         <section className="task-introduction" aria-labelledby="task-introduction-heading">
@@ -62,7 +65,6 @@ export function AppShell({ state, onAction, onReset, onNewCase }: AppShellProps)
         <button className="button button-primary" type="button" onClick={() => setShowCompletedWork(true)}>Se afsluttet opgave</button>
       </section>}
       {showWork && <>
-        <ProgressNav state={state} onAction={onAction} />
         {historical && <HistoricalBanner onReturn={() => onAction({ type: 'returnToCurrentStep' })} />}
         <StepShell state={state} onAction={onAction} />
       </>}

@@ -67,7 +67,7 @@ export function ProceedsStep({ state, onAction, readOnly }: ProceedsStepProps) {
           {given('−', 'Faste låneomkostninger', danishNumber(input.financingTerms.fixedCost))}
           {manual('=', 'Provenu', 'proceeds')}
         </> : <>
-          {given('×', 'Kurs', danishNumber(input.financingTerms.issuePrice), '%')}
+          {given('×', 'Kurs', danishNumber(input.financingTerms.issuePrice), '')}
           {manual('=', 'Kursværdi', 'marketValue')}
           <div className="given-detail">Kurtagesats <strong>{ratePercent(input.financingTerms.brokerageRate)} %</strong> <FieldActionBadge action="oplyst" /></div>
           {manual('−', 'Kurtage i kr.', 'brokerage')}
