@@ -167,11 +167,20 @@ export function deserializeStudentSession(input: unknown): RestoreResult {
     if (input.rulesetVersion !== RULESET_VERSION) return fail('UNSUPPORTED_RULESET_VERSION');
     if (input.studentStateVersion !== STUDENT_STATE_VERSION) return fail('UNSUPPORTED_STUDENT_STATE_VERSION');
     if (typeof input.generatorVersion !== 'string' || !/^\d+\.\d+\.\d+$/.test(input.generatorVersion)) return fail('INVALID_GENERATOR_VERSION');
+    // Earlier v2 snapshots may omit Step 3 work; keep the same schema and start it empty.
+    const rawState = input.studentState;
+    const rawInterest = isObject(rawState) ? rawState.effectiveInterest : undefined;
+    const interest = isObject(rawInterest) ? rawInterest : rawInterest === undefined ? {} : rawInterest;
+    const normalized = isObject(rawState) && isObject(interest) ? {
+      ...input, studentState: { ...rawState, effectiveInterest: {
+        rows: {}, approvedTerms: [], remainingCalculated: false, rateCalculated: false, ...interest,
+      } },
+    } : input;
     const document = object({
       schemaVersion: literal(PERSISTENCE_SCHEMA_VERSION), rulesetVersion: literal(RULESET_VERSION),
       generatorVersion: str, studentStateVersion: literal(STUDENT_STATE_VERSION),
       selectedLoanType: loanType, seed: integer(0, 0xFFFFFFFF), generatedCase, studentState,
-    })(input) as Record<string, unknown>;
+    })(normalized) as Record<string, unknown>;
     const snapshot = document.generatedCase as Record<string, unknown>;
     const stored = document.studentState as Record<string, unknown>;
     if (snapshot.generatorVersion !== document.generatorVersion || snapshot.seed !== document.seed || snapshot.loanType !== document.selectedLoanType) return fail();
@@ -180,7 +189,7 @@ export function deserializeStudentSession(input: unknown): RestoreResult {
     if (inputCase.loanType !== snapshot.loanType) return fail();
     // Stored snapshots remain authoritative across generator releases. Never regenerate here.
     if (JSON.stringify(inputCase) !== JSON.stringify((stored.caseResult as Record<string, unknown>).input)) return fail();
-    const savedSchedule = (input.studentState as Record<string, unknown>).schedule as Record<string, unknown>;
+    const savedSchedule = (normalized.studentState as Record<string, unknown>).schedule as Record<string, unknown>;
     if (!Object.hasOwn(savedSchedule, 'annuityPaymentCalculated')) {
       const schedule = stored.schedule as StudentState['schedule'];
       schedule.annuityPaymentCalculated = snapshot.loanType === 'annuity'

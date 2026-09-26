@@ -247,7 +247,14 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       const next = copy(state); const row = next.effectiveInterest.rows[action.term] ??= { amount: '', sign: null, approved: false, errorCode: null };
       const validation = validateCashFlowRow(row.amount, row.sign as '+' | '-', expected.amount, expected.direction === 'inflow' ? '+' : '-');
       row.errorCode = validation.errorCode;
-      if (validation.correct) { row.approved = true; next.effectiveInterest.approvedTerms.push(action.term); }
+      if (validation.correct) {
+        row.approved = true;
+        next.effectiveInterest.approvedTerms.push(action.term);
+        const count = next.caseResult.contract.rows.length;
+        if (manualTerms(next.generatedCase.loanType, count, true).every((term) => next.effectiveInterest.approvedTerms.includes(term))) {
+          next.effectiveInterest.remainingCalculated = true;
+        }
+      }
       return next;
     }
     case 'calculateRemainingCashFlows': {
@@ -258,7 +265,11 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
     }
     case 'calculateEffectiveRate': {
       if (!allowed(state, 'effectiveInterest') || !state.effectiveInterest.remainingCalculated || state.effectiveInterest.rateCalculated) return state;
-      const next = copy(state); next.effectiveInterest.rateCalculated = true; completeStep(next); return next;
+      const next = copy(state);
+      next.caseResult = { ...next.caseResult, effectiveInterest: solveEffectiveInterest(next.caseResult.cashFlows) };
+      next.effectiveInterest.rateCalculated = true;
+      completeStep(next);
+      return next;
     }
     case 'editAmortizationField': {
       if (!allowed(state, 'amortizedCost') || amortizationSubrowStatus(state, action.term, action.subtable) !== 'active') return state;
