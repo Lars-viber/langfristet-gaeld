@@ -1,4 +1,4 @@
-import { buildAmortizedCost, buildCashFlows, buildContractSchedule, buildPostingEvents, calculateAccountBalances, calculateProceeds, classifyYearEnd, evaluateFinalChecks, solveEffectiveInterest } from '../domain';
+import { buildAmortizedCost, buildCashFlows, buildContractSchedule, buildPostingEvents, calculateAccountBalances, calculateProceeds, classifyYearEnd, evaluateFinalChecks, lastManualTermValues, solveEffectiveInterest } from '../domain';
 import { D } from '../domain/decimal';
 import type { AccountNumber } from '../domain';
 import type { GeneratedLevel1Case } from '../generator';
@@ -43,13 +43,15 @@ export function createStudentState(generatedCase: GeneratedLevel1Case): StudentS
   for (const row of result.contract.rows) {
     if (row.date > '2026-12-31' && row.date <= '2027-12-31') upcomingRepayments[row.term] = field();
   }
+  const amortizationTerms: StudentState['amortization']['terms'] = { 1: amortizationTerm(), 2: amortizationTerm() };
+  if (generatedCase.loanType === 'bullet') amortizationTerms[contract.rows.length] ??= amortizationTerm();
   return {
     schemaVersion: STUDENT_STATE_VERSION, generatedCase, caseResult: result,
     currentStep: 'proceeds', viewingStep: 'proceeds', completedSteps: [], sessionStatus: 'active',
     proceeds: {}, initialRecognition: block(),
     schedule: { prerequisites: {}, annuityPaymentCalculated: false, rows: {}, approvedTerms: [], remainingCalculated: false },
     effectiveInterest: { rows: {}, approvedTerms: [], remainingCalculated: false, rateCalculated: false },
-    amortization: { terms: { 1: amortizationTerm(), 2: amortizationTerm() }, remainingCalculated: false },
+    amortization: { terms: amortizationTerms, remainingCalculated: false },
     bookkeeping,
     classification: { fields: {}, upcomingRepayments, reconciled: false, reclassification: block(), reclassificationAnswer: null, answerErrorCode: null },
     completion: { balances: {}, checks: { debtReconciles: false, financialExpenseReconciles: false, accountsReconcile: false } },
@@ -277,28 +279,41 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       if (!(validFields as string[]).includes(action.field)) return state;
       const term = state.amortization.terms[action.term];
       if (term?.[action.subtable][action.field as IncomeField & BalanceField]?.approved) return state;
-      const next = copy(state); const target = next.amortization.terms[action.term]![action.subtable] as Partial<Record<typeof action.field, FieldState>>;
+      const next = copy(state); const target = (next.amortization.terms[action.term] ??= amortizationTerm())[action.subtable] as Partial<Record<typeof action.field, FieldState>>;
       editField(target[action.field] ??= field(), action.raw); return next;
     }
     case 'checkAmortizationSubrow': {
       if (!allowed(state, 'amortizedCost') || amortizationSubrowStatus(state, action.term, action.subtable) !== 'active') return state;
       const result = calculatedResult(state); const expected = action.subtable === 'income' ? result.incomeSchedule[action.term - 1] : result.carryingSchedule[action.term - 1];
       if (!expected) return state;
-      const next = copy(state); const term = next.amortization.terms[action.term]!;
+      const lastManual = state.generatedCase.loanType === 'bullet' && action.term === result.contract.rows.length;
+      const manualLast = lastManual ? lastManualTermValues(result.incomeSchedule[action.term - 1]!, result.carryingSchedule[action.term - 1]!, result.effectiveInterest.rate) : null;
+      if (manualLast && !manualLast.matchesClosingAdjustment) return state;
+      const next = copy(state); const term = next.amortization.terms[action.term] ??= amortizationTerm();
       const target = term[action.subtable] as Partial<Record<IncomeField | BalanceField, FieldState>>;
       const keys = action.subtable === 'income' ? incomeFields() : balanceFields();
       for (const key of keys) {
         const entry = target[key] ??= field();
-        if (!entry.approved) storeCheck(entry, validateManualCalculation(entry.raw, { expected: expected[key as keyof typeof expected] as InstanceType<typeof D>, requirePositive: true, references: { [FULL_PRECISION_RATE]: result.effectiveInterest.rate } }));
+        const ordinaryExpected = manualLast && (key === 'totalInterestExpense' || key === 'amortization' || key === 'closingCarryingAmount')
+          ? manualLast[key] : expected[key as keyof typeof expected] as InstanceType<typeof D>;
+        if (!entry.approved) storeCheck(entry, key === 'nominalInterest' || key === 'openingCarryingAmount' || key === 'principalRepayment' || (key === 'amortization' && action.subtable === 'balance')
+          ? validateAmount(entry.raw, { expected: ordinaryExpected, requirePositive: true })
+          : validateManualCalculation(entry.raw, { expected: ordinaryExpected, requirePositive: true, references: { [FULL_PRECISION_RATE]: result.effectiveInterest.rate } }));
       }
       if (keys.every((key) => target[key]?.approved)) {
         if (action.subtable === 'income') term.incomeApproved = true;
-        else { term.balanceApproved = true; term.approved = true; }
+        else {
+          term.balanceApproved = true; term.approved = true;
+          if (manualTerms(next.generatedCase.loanType, result.contract.rows.length).every((manualTerm) => next.amortization.terms[manualTerm]?.approved)) {
+            next.amortization.remainingCalculated = true;
+            completeStep(next);
+          }
+        }
       }
       return next;
     }
     case 'calculateRemainingAmortization': {
-      if (!allowed(state, 'amortizedCost') || state.amortization.remainingCalculated || !state.amortization.terms[1]?.approved || !state.amortization.terms[2]?.approved) return state;
+      if (!allowed(state, 'amortizedCost') || state.amortization.remainingCalculated || !manualTerms(state.generatedCase.loanType, state.caseResult.contract.rows.length).every((term) => state.amortization.terms[term]?.approved)) return state;
       const next = copy(state); next.amortization.remainingCalculated = true; completeStep(next); return next;
     }
     case 'setBookkeepingBlock': {

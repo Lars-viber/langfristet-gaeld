@@ -31,3 +31,17 @@ export function buildAmortizedCost(
   }
   return { incomeSchedule, carryingSchedule };
 }
+
+/** The learner's ordinary last-term calculation, before the existing closing adjustment. */
+export function lastManualTermValues(
+  income: IncomeScheduleRow, carrying: CarryingAmountScheduleRow, fullPrecisionRate: Decimal,
+) {
+  const totalInterestExpense = roundMoney(carrying.openingCarryingAmount.times(fullPrecisionRate));
+  const amortization = roundMoney(totalInterestExpense.minus(income.nominalInterest));
+  const closingCarryingAmount = roundMoney(carrying.openingCarryingAmount.minus(carrying.principalRepayment).plus(amortization));
+  const adjustment = carrying.amortization.minus(amortization);
+  const matchesClosingAdjustment = adjustment.eq(closingCarryingAmount.neg())
+    && carrying.closingCarryingAmount.isZero()
+    && income.totalInterestExpense.eq(income.nominalInterest.plus(carrying.amortization));
+  return { totalInterestExpense, amortization, closingCarryingAmount, adjustment, matchesClosingAdjustment };
+}

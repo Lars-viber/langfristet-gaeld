@@ -649,3 +649,44 @@
   .interest-table-top { align-items: stretch; flex-direction: column; }
   .interest-table-top .button { align-self: flex-start; }
 }
+
+/* R4: compact amortized-cost workspace, scoped away from frozen steps. */
+.r4-amortization-work { grid-template-columns: minmax(205px, .28fr) minmax(0, 1fr); gap: .65rem; align-items: stretch; margin-top: 0; }
+.amortization-reference { display: flex; flex-direction: column; min-width: 0; padding: .75rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-muted); }
+.amortization-reference h2 { margin: 0 0 .35rem; color: var(--primary-strong); font-size: 1rem; font-weight: 750; }
+.amortization-reference p { margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.38; }
+.amortization-reference > p + p { margin-top: .45rem; }
+.amortization-reference dl { display: grid; gap: .3rem; margin: .6rem 0; font-size: .7rem; }
+.amortization-reference dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .2rem .4rem; }
+.amortization-reference dt { color: var(--text-muted); }
+.amortization-reference dd { margin: 0; color: var(--primary-strong); font-weight: 750; font-variant-numeric: tabular-nums; }
+.amortization-current-reference { margin-top: .65rem; padding-top: .45rem; border-top: 1px solid var(--border); font-size: .72rem; }
+.amortization-current-reference strong { color: var(--primary-strong); }
+.amortization-current-reference dl { margin: .3rem 0 0; }
+.amortization-reference .amortization-history-note { margin-top: .65rem; color: var(--primary-strong); font-weight: 700; }
+.amortization-continue { align-self: flex-start; min-height: 34px; margin-top: auto; padding: .35rem .55rem; font-size: .72rem; }
+.amortization-main { display: grid; align-content: start; gap: .65rem; min-width: 0; }
+.r4-amortization-work .amortization-table-card { width: 100%; max-width: none; min-width: 0; padding: .6rem .7rem; }
+.r4-amortization-work .is-active-table { border-color: var(--primary); box-shadow: inset 3px 0 var(--primary); }
+.amortization-table-top { display: flex; align-items: center; justify-content: space-between; gap: .65rem; }
+.amortization-table-top h3 { margin: 0 0 .2rem; color: var(--primary-strong); font-size: .9rem; }
+.amortization-instruction { margin: 0; color: var(--primary-strong); font-size: .72rem; font-weight: 700; line-height: 1.35; }
+.amortization-table-top .button { flex: 0 0 auto; min-height: 34px; padding: .3rem .5rem; font-size: .7rem; }
+.amortization-equation { margin: .28rem 0 .4rem; color: var(--text-muted); font-size: .67rem; }
+.r4-amortization-work .amortization-scroll { max-height: 260px; overflow: auto; }
+.r4-amortization-work .amortization-table { width: 100%; min-width: 760px; margin: 0; font-size: .72rem; font-variant-numeric: tabular-nums; }
+.r4-amortization-work .amortization-table th, .r4-amortization-work .amortization-table td { min-width: 0; padding: .28rem .3rem; vertical-align: top; }
+.r4-amortization-work .amortization-table th:first-child, .r4-amortization-work .amortization-table td:first-child { min-width: 48px; }
+.r4-amortization-work .amortization-table th:nth-child(2), .r4-amortization-work .amortization-table td:nth-child(2) { min-width: 80px; }
+.r4-amortization-work .amortization-table thead th, .r4-amortization-work .amortization-table tbody th, .r4-amortization-work .amortization-table tbody td:nth-child(2) { text-align: center; }
+.r4-amortization-work .amortization-table tbody td:nth-child(n + 3) { text-align: right; }
+.amortization-row-check { margin-left: .2rem; color: var(--success); font-weight: 800; }
+.r4-amortization-work .amortization-field input { min-height: 32px; padding: .25rem .35rem; font-size: .69rem; text-align: right; font-variant-numeric: tabular-nums; }
+.r4-amortization-work .amortization-field.is-approved input { border-color: #8CBDAB; background: #F0F8F4; }
+.amortization-result, .amortization-adjusted { display: block; margin-top: .1rem; font-size: .65rem; font-variant-numeric: tabular-nums; text-align: right; }
+.amortization-result { color: var(--success); }
+.amortization-adjusted { color: var(--primary-strong); font-weight: 750; }
+.r4-amortization-work .amortization-field .validation-message { margin-top: .12rem; font-size: .62rem; }
+.amortization-rounding-note { margin: .4rem 0 0; color: var(--primary-strong); font-size: .69rem; }
+@media (max-width: 760px) { .r4-amortization-work { grid-template-columns: minmax(0, 1fr); }.amortization-reference { min-height: 0; }.amortization-continue { margin-top: .65rem; } }
+@media (max-width: 500px) { .amortization-table-top { align-items: stretch; flex-direction: column; }.amortization-table-top .button { align-self: flex-start; } }

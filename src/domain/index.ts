@@ -16,7 +16,7 @@ export { calculateProceeds } from './proceeds';
 export { buildContractSchedule } from './contractSchedule';
 export { buildCashFlows } from './cashFlows';
 export { npvAtRate, solveEffectiveInterest } from './effectiveInterest';
-export { buildAmortizedCost } from './amortizedCost';
+export { buildAmortizedCost, lastManualTermValues } from './amortizedCost';
 export { buildPostingEvents, eventBalances } from './accounting';
 export { classifyYearEnd } from './classification';
 export { calculateAccountBalances } from './balances';

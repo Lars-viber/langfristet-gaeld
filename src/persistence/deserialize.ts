@@ -171,10 +171,13 @@ export function deserializeStudentSession(input: unknown): RestoreResult {
     const rawState = input.studentState;
     const rawInterest = isObject(rawState) ? rawState.effectiveInterest : undefined;
     const interest = isObject(rawInterest) ? rawInterest : rawInterest === undefined ? {} : rawInterest;
-    const normalized = isObject(rawState) && isObject(interest) ? {
+    const rawAmortization = isObject(rawState) ? rawState.amortization : undefined;
+    const amortization = isObject(rawAmortization) ? rawAmortization : rawAmortization === undefined ? {} : rawAmortization;
+    const emptyTerm = () => ({ income: {}, balance: {}, incomeApproved: false, balanceApproved: false, approved: false });
+    const normalized = isObject(rawState) && isObject(interest) && isObject(amortization) ? {
       ...input, studentState: { ...rawState, effectiveInterest: {
         rows: {}, approvedTerms: [], remainingCalculated: false, rateCalculated: false, ...interest,
-      } },
+      }, amortization: { terms: { 1: emptyTerm(), 2: emptyTerm() }, remainingCalculated: false, ...amortization } },
     } : input;
     const document = object({
       schemaVersion: literal(PERSISTENCE_SCHEMA_VERSION), rulesetVersion: literal(RULESET_VERSION),

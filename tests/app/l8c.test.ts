@@ -2,8 +2,9 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../../src/app/AppShell';
+import { lastManualTermValues } from '../../src/domain';
 import { transitionStudentSession } from '../../src/app/controller';
-import { createMemorySessionStorage, loadStudentSession } from '../../src/persistence';
+import { createMemorySessionStorage, loadStudentSession, saveStudentSession } from '../../src/persistence';
 import { amortizationSubrowStatus, applyStudentAction, createStudentState, deriveStudentView } from '../../src/student';
 import type { StudentAction, StudentState } from '../../src/student';
 import type { StudentPostingLine } from '../../src/validation';
@@ -33,11 +34,16 @@ function atStep5(fixture: GoldenFixture): StudentState {
 
 function approveSubrow(state: StudentState, term: number, subtable: 'income' | 'balance'): StudentState {
   const row = subtable === 'income' ? state.caseResult.incomeSchedule[term - 1]! : state.caseResult.carryingSchedule[term - 1]!;
+  const last = state.generatedCase.loanType === 'bullet' && term === state.caseResult.contract.rows.length
+    ? lastManualTermValues(state.caseResult.incomeSchedule[term - 1]!, state.caseResult.carryingSchedule[term - 1]!, state.caseResult.effectiveInterest.rate) : null;
   const fields = subtable === 'income'
     ? ['nominalInterest', 'amortization', 'totalInterestExpense'] as const
     : ['openingCarryingAmount', 'principalRepayment', 'amortization', 'closingCarryingAmount'] as const;
   for (const field of fields) {
-    state = take(state, { type: 'editAmortizationField', term, subtable, field, raw: formula((row as unknown as Record<string, { toFixed(places: number): string }>)[field]!) });
+    const value = last && (field === 'totalInterestExpense' || field === 'amortization' || field === 'closingCarryingAmount')
+      ? last[field] : (row as unknown as Record<string, { toFixed(places: number): string }>)[field]!;
+    const transfer = subtable === 'income' ? field === 'nominalInterest' : field !== 'closingCarryingAmount';
+    state = take(state, { type: 'editAmortizationField', term, subtable, field, raw: transfer ? number(value) : formula(value) });
   }
   state = take(state, { type: 'checkAmortizationSubrow', term, subtable });
   expect(state.amortization.terms[term]?.[`${subtable}Approved`]).toBe(true);
@@ -82,14 +88,14 @@ describe('L8C amortization and year bookkeeping', () => {
 
   it('locks only correct fields in an active result row', () => {
     let state = atStep5(r1);
-    state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'nominalInterest', raw: '=560000+0' });
+    state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'nominalInterest', raw: '560000' });
     state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'amortization', raw: '=1+1' });
     state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
     expect(state.amortization.terms[1]?.income.nominalInterest?.approved).toBe(true);
     expect(state.amortization.terms[1]?.income.amortization?.approved).toBe(false);
     expect(take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'nominalInterest', raw: '=2+2' })).toBe(state);
     expect(amortizationSubrowStatus(state, 1, 'balance')).toBe('locked');
-    expect(render(state)).toContain('1 af 3 felter godkendt');
+    expect(render(state)).toContain('560.000,00 kr.');
   });
 
   it('opens balance term 1 only after the complete result row', () => {
@@ -107,24 +113,98 @@ describe('L8C amortization and year bookkeeping', () => {
       state = approveSubrow(state, term, 'balance');
       expect(state.amortization.terms[term]?.approved).toBe(true);
     }
-    expect(render(state)).toContain('Beregn resterende terminer efter samme princip');
-    state = take(state, { type: 'calculateRemainingAmortization' });
+    expect(state.amortization.remainingCalculated).toBe(true);
     expect(state.currentStep).toBe('amortizedCost');
     expect(amortizationSubrowStatus(state, 3, 'income')).toBe('appCalculated');
     const history = take(state, { type: 'viewHistoricalStep', step: 'amortizedCost' });
-    expect(render(history)).toContain('Beregnet af appen');
+    expect(render(history)).toContain('calculated-value');
     expect(render(history)).toContain('readOnly');
   });
 
-  it('has no final manual amortization term for a standing loan', () => {
+  it('keeps the standing loan last term manual after the intervening rows open', () => {
     let state = atStep5(r5);
     for (const term of [1, 2]) {
       state = approveSubrow(state, term, 'income');
       state = approveSubrow(state, term, 'balance');
     }
-    expect(amortizationSubrowStatus(state, 20, 'income')).toBe('locked');
-    state = take(state, { type: 'calculateRemainingAmortization' });
-    expect(amortizationSubrowStatus(state, 20, 'income')).toBe('appCalculated');
+    expect(amortizationSubrowStatus(state, 3, 'income')).toBe('appCalculated');
+    expect(amortizationSubrowStatus(state, 20, 'income')).toBe('active');
+    expect(state.amortization.remainingCalculated).toBe(false);
+  });
+
+  it('accepts R5 ordinary last-term work, preserves it, and shows the separate cent adjustment', () => {
+    let state = atStep5(r5);
+    const count = state.caseResult.contract.rows.length;
+    const last = lastManualTermValues(state.caseResult.incomeSchedule[count - 1]!, state.caseResult.carryingSchedule[count - 1]!, state.caseResult.effectiveInterest.rate);
+    expect(last.totalInterestExpense.toFixed(2)).toBe('328100.04');
+    expect(last.closingCarryingAmount.toFixed(2)).toBe('0.01');
+    expect(last.adjustment.toFixed(2)).toBe('-0.01');
+    expect(last.matchesClosingAdjustment).toBe(true);
+    for (const term of [1, 2]) {
+      state = approveSubrow(state, term, 'income');
+      state = approveSubrow(state, term, 'balance');
+    }
+    const rawExpense = `=${number(state.caseResult.carryingSchedule[count - 1]!.openingCarryingAmount)}*[Effektiv rente · fuld præcision]`;
+    state = take(state, { type: 'editAmortizationField', term: count, subtable: 'income', field: 'nominalInterest', raw: number(state.caseResult.incomeSchedule[count - 1]!.nominalInterest) });
+    state = take(state, { type: 'editAmortizationField', term: count, subtable: 'income', field: 'amortization', raw: formula(last.amortization) });
+    state = take(state, { type: 'editAmortizationField', term: count, subtable: 'income', field: 'totalInterestExpense', raw: rawExpense });
+    state = take(state, { type: 'checkAmortizationSubrow', term: count, subtable: 'income' });
+    expect(state.amortization.terms[count]?.incomeApproved).toBe(true);
+    state = approveSubrow(state, count, 'balance');
+    expect(state.amortization.remainingCalculated).toBe(true);
+    expect(state.currentStep).toBe('amortizedCost');
+    expect(state.caseResult.carryingSchedule[count - 1]!.closingCarryingAmount.toFixed(2)).toBe('0.00');
+    const finalIncome = state.caseResult.incomeSchedule[count - 1]!;
+    expect(finalIncome.nominalInterest.plus(finalIncome.amortization).eq(finalIncome.totalInterestExpense)).toBe(true);
+    expect(finalIncome.totalInterestExpense.toFixed(2)).toBe('328100.03');
+    expect(state.amortization.terms[count]?.income.totalInterestExpense?.raw).toBe(rawExpense);
+    expect(state.amortization.terms[count]?.income.totalInterestExpense?.approved).toBe(true);
+    expect(state.amortization.terms[count]?.balance.closingCarryingAmount?.raw).toBe('=0,01+0');
+    const html = render(state);
+    expect(html).toContain('Afrundingsregulering:');
+    expect(html).toContain('Efter afrunding: 0,00 kr.');
+    const adapter = createMemorySessionStorage();
+    expect(saveStudentSession(adapter, state).status).toBe('saved');
+    const loaded = loadStudentSession(adapter);
+    expect(loaded.status).toBe('restored');
+    if (loaded.status !== 'restored') throw new Error('Restore failed');
+    expect(loaded.state.amortization.terms[count]?.income.totalInterestExpense?.raw).toBe(rawExpense);
+    expect(render(loaded.state)).toContain('Afrundingsregulering:');
+  });
+
+  it('rejects a materially wrong final standing-loan expense and leaves the balance locked', () => {
+    let state = atStep5(r5);
+    for (const term of [1, 2]) {
+      state = approveSubrow(state, term, 'income');
+      state = approveSubrow(state, term, 'balance');
+    }
+    const term = state.caseResult.contract.rows.length;
+    const nominal = state.caseResult.incomeSchedule[term - 1]!.nominalInterest;
+    state = take(state, { type: 'editAmortizationField', term, subtable: 'income', field: 'nominalInterest', raw: number(nominal) });
+    state = take(state, { type: 'editAmortizationField', term, subtable: 'income', field: 'totalInterestExpense', raw: '=328101,04' });
+    state = take(state, { type: 'checkAmortizationSubrow', term, subtable: 'income' });
+    expect(state.amortization.terms[term]?.income.totalInterestExpense?.approved).toBe(false);
+    expect(amortizationSubrowStatus(state, term, 'balance')).toBe('locked');
+  });
+
+  it('recognizes a cent-only closing adjustment for an annual standing bond', () => {
+    const generated = { generatorVersion: '1.0.0', seed: 1, loanType: 'bullet' as const, attempts: 1,
+      caseInput: { loanType: 'bullet' as const, financingType: 'bond' as const,
+        issueDate: '2026-01-01' as const, nominalPrincipal: '10000000', nominalAnnualRate: '0.06',
+        years: 5 as const, paymentsPerYear: 1 as const, openingBankBalance: '1000000',
+        financingTerms: { issuePrice: '98', brokerageRate: '0.015', fixedCost: '50000' } } };
+    const base = createStudentState(generated);
+    let state: StudentState = { ...base, currentStep: 'amortizedCost', viewingStep: 'amortizedCost',
+      completedSteps: ['proceeds', 'contractSchedule', 'effectiveInterest'] };
+    const last = lastManualTermValues(state.caseResult.incomeSchedule[4]!, state.caseResult.carryingSchedule[4]!, state.caseResult.effectiveInterest.rate);
+    expect(last.totalInterestExpense.toFixed(2)).toBe('690438.87');
+    expect(last.closingCarryingAmount.toFixed(2)).toBe('0.01');
+    expect(last.matchesClosingAdjustment).toBe(true);
+    for (const term of [1, 2, 5]) {
+      state = approveSubrow(state, term, 'income');
+      state = approveSubrow(state, term, 'balance');
+    }
+    expect(state.amortization.remainingCalculated).toBe(true);
   });
 
   it('accepts the full precision IA reference and preserves raw formulas through restore', () => {

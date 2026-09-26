@@ -26,6 +26,15 @@ describe('L6 serialization', () => {
     expect(restored(state)).toEqual(state);
   });
 
+  it('supplies safe Step 4 defaults when an existing v2 snapshot lacks amortization work', () => {
+    const snapshot = dto(fresh());
+    delete snapshot.studentState.amortization;
+    const result = deserializeStudentSession(snapshot);
+    expect(result.status).toBe('restored');
+    if (result.status !== 'restored') throw new Error(result.code);
+    expect(result.state.amortization).toMatchObject({ remainingCalculated: false, terms: { 1: { approved: false }, 2: { approved: false } } });
+  });
+
   it('keeps in-progress proceeds formula and feedback byte for byte', () => {
     let state = fresh();
     state = applyStudentAction(state, { type: 'editProceedsFormula', field: 'variableCost', raw: '=7.500.000*1,5%' });

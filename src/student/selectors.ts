@@ -37,12 +37,14 @@ export function cashFlowRowStatus(state: StudentState, term: number): RowStatus 
 export function amortizationSubrowStatus(state: StudentState, term: number, subtable: 'income' | 'balance'): RowStatus {
   const count = state.generatedCase.caseInput.years * state.generatedCase.caseInput.paymentsPerYear;
   if (term < 1 || term > count) return 'locked';
-  if (term > 2) return state.amortization.remainingCalculated ? 'appCalculated' : 'locked';
+  const manual = manualTerms(state.generatedCase.loanType, count);
+  if (!manual.includes(term)) return state.amortization.remainingCalculated
+    || (state.generatedCase.loanType === 'bullet' && state.amortization.terms[1]?.approved && state.amortization.terms[2]?.approved)
+    ? 'appCalculated' : 'locked';
   const row = state.amortization.terms[term];
-  if (!row) return 'locked';
-  if (row[`${subtable}Approved`]) return 'approved';
-  const activeTerm = [1, 2].find((candidate) => !state.amortization.terms[candidate]?.approved);
-  const activeSubtable = row.incomeApproved ? 'balance' : 'income';
+  if (row?.[`${subtable}Approved`]) return 'approved';
+  const activeTerm = manual.find((candidate) => !state.amortization.terms[candidate]?.approved);
+  const activeSubtable = row?.incomeApproved ? 'balance' : 'income';
   return state.currentStep === 'amortizedCost' && term === activeTerm && subtable === activeSubtable ? 'active' : 'locked';
 }
 export function prerequisitesApproved(state: StudentState): boolean {
@@ -67,7 +69,8 @@ export function classificationStage(state: StudentState): 'carrying' | 'upcoming
   return state.caseResult.classification.reclassificationRequired ? 'reclassification' : 'noReclassification';
 }
 export function deriveStudentView(state: StudentState) {
-  const activeAmortizationTerm = [1, 2].find((term) => !state.amortization.terms[term]?.approved) ?? null;
+  const activeAmortizationTerm = manualTerms(state.generatedCase.loanType, state.caseResult.contract.rows.length)
+    .find((term) => !state.amortization.terms[term]?.approved) ?? null;
   const activeModel = state.caseResult;
   const actual2026Terms = activeModel.actual2026Terms.map((row) => row.term);
   const activeBookkeepingTerm = actual2026Terms.find((term) => !state.bookkeeping[term]?.amortization.approved) ?? null;

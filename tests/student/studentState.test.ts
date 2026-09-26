@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateLoan } from '../../src/domain';
+import { calculateLoan, lastManualTermValues } from '../../src/domain';
 import type { LoanResult, NetMovement } from '../../src/domain';
 import type { GeneratedLevel1Case } from '../../src/generator';
 import {
@@ -86,19 +86,26 @@ function approveCashFlows(state: StudentState): StudentState {
 }
 function approveAmortization(state: StudentState): StudentState {
   const model = calculateLoan(state.generatedCase.caseInput);
-  for (const term of [1, 2]) {
+  const count = model.contract.rows.length;
+  for (const term of state.generatedCase.loanType === 'bullet' ? [1, 2, count] : [1, 2]) {
     const income = model.incomeSchedule[term - 1]!;
+    const ordinary = state.generatedCase.loanType === 'bullet' && term === count
+      ? lastManualTermValues(income, model.carryingSchedule[term - 1]!, model.effectiveInterest.rate) : null;
     for (const field of ['nominalInterest', 'amortization', 'totalInterestExpense'] as const) {
-      state = take(state, { type: 'editAmortizationField', term, subtable: 'income', field, raw: formula(income[field]) });
+      const value = ordinary && field !== 'nominalInterest' ? ordinary[field] : income[field];
+      state = take(state, { type: 'editAmortizationField', term, subtable: 'income', field,
+        raw: field === 'nominalInterest' ? dk(value.toFixed(2)) : formula(value) });
     }
     state = take(state, { type: 'checkAmortizationSubrow', term, subtable: 'income' });
     const balance = model.carryingSchedule[term - 1]!;
     for (const field of ['openingCarryingAmount', 'principalRepayment', 'amortization', 'closingCarryingAmount'] as const) {
-      state = take(state, { type: 'editAmortizationField', term, subtable: 'balance', field, raw: formula(balance[field]) });
+      const value = ordinary && (field === 'amortization' || field === 'closingCarryingAmount') ? ordinary[field] : balance[field];
+      state = take(state, { type: 'editAmortizationField', term, subtable: 'balance', field,
+        raw: field === 'closingCarryingAmount' ? formula(value) : dk(value.toFixed(2)) });
     }
     state = take(state, { type: 'checkAmortizationSubrow', term, subtable: 'balance' });
   }
-  return take(state, { type: 'calculateRemainingAmortization' });
+  return state;
 }
 function approveBookkeeping(state: StudentState): StudentState {
   const model = calculateLoan(state.generatedCase.caseInput);
@@ -350,10 +357,11 @@ describe('L5 student progression', () => {
     expect(state.amortization.terms[2]?.approved).toBe(true);
     expect(amortizationSubrowStatus(state, 3, 'income')).toBe('appCalculated');
   });
-  it('has no manual last amortization exception for bullet loans', () => {
+  it('requires the final standing-loan term while intervening rows are app-calculated', () => {
     const state = throughAmortization(r6);
-    expect(Object.keys(state.amortization.terms)).toEqual(['1', '2']);
-    expect(amortizationSubrowStatus(state, 8, 'balance')).toBe('appCalculated');
+    expect(Object.keys(state.amortization.terms)).toEqual(['1', '2', '8']);
+    expect(amortizationSubrowStatus(state, 3, 'balance')).toBe('appCalculated');
+    expect(amortizationSubrowStatus(state, 8, 'balance')).toBe('approved');
   });
   it('requires payment approval before amortization posting opens', () => {
     const state = throughAmortization(r1);
