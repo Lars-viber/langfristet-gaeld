@@ -19,6 +19,7 @@ export function EffectiveInterestStep({ state, onAction, readOnly }: {
   const canContinue = state.completedSteps.includes('effectiveInterest') && !readOnly && !historical;
   const approvedProceeds = state.proceeds.proceeds?.approved;
   const approvedSchedule = state.schedule.remainingCalculated;
+  const activeRow = state.caseResult.cashFlows.find((row) => cashFlowRowStatus(state, row.term) === 'active');
 
   return <div className="step-work interest-work r3-interest-work">
     <aside className="interest-reference" aria-label="Vejledning til effektiv rente">
@@ -40,9 +41,10 @@ export function EffectiveInterestStep({ state, onAction, readOnly }: {
     </aside>
     <div className="interest-main">
       <section className="work-card interest-table-card" aria-label="Pengestrømme">
-        <p className="interest-instruction">Din opgave: {loanType === 'bullet'
+        <div className="interest-table-top"><p className="interest-instruction">Din opgave: {loanType === 'bullet'
           ? 'Udfyld termin 0, termin 1, termin 2 og sidste termin. Når de er korrekte, beregner appen de øvrige pengestrømme.'
           : 'Udfyld termin 0, termin 1 og termin 2. Når de er korrekte, beregner appen de resterende pengestrømme.'}</p>
+          {activeRow && !readOnly && <button className="button button-primary" type="button" onClick={() => onAction({ type: 'checkCashFlowRow', term: activeRow.term })}>Kontrollér termin {activeRow.term}</button>}</div>
         <div className="table-scroll interest-scroll" role="region" aria-label="Vandret rulbar pengestrømstabel" tabIndex={0}>
           <table className="finance-table interest-table"><thead><tr><th scope="col">Termin</th><th scope="col">Dato</th><th scope="col">Fortegn</th><th scope="col">Beløb</th></tr></thead>
             <tbody>{state.caseResult.cashFlows.map((expected) => {
@@ -73,10 +75,6 @@ export function EffectiveInterestStep({ state, onAction, readOnly }: {
               </tr>;
             })}</tbody></table>
         </div>
-        {state.caseResult.cashFlows.map((row) => cashFlowRowStatus(state, row.term) === 'active' && !readOnly
-          ? <div className="interest-row-action" key={row.term}><span>Udfyld termin {row.term}, og kontrollér rækken.</span>
-              <button className="button button-primary" type="button" onClick={() => onAction({ type: 'checkCashFlowRow', term: row.term })}>Kontrollér termin {row.term}</button>
-            </div> : null)}
       </section>
       <section className="work-card interest-rate-card" aria-label="Beregn effektiv rente">
         <p className="interest-instruction">Din opgave: Beregn den effektive rente ud fra den godkendte pengestrøm.</p>

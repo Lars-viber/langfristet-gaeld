@@ -57,12 +57,15 @@ export function ProceedsStep({ state, onAction, readOnly }: ProceedsStepProps) {
     </div>;
   }
   const completed = state.completedSteps.includes('proceeds');
+  const historical = state.viewingStep !== state.currentStep;
   const canContinue = completed && !readOnly && state.sessionStatus === 'active' && state.currentStep === 'proceeds';
   return <div className="step-work proceeds-work">
     <aside className="proceeds-reference" aria-label="Grundlag for provenuberegning">
       <h2 id="step-heading">Provenu</h2>
       <p>Her arbejder du med lånets omkostninger og det beløb, virksomheden modtager.</p>
       <p className="proceeds-reference-note">Fradragets retning er allerede vist med −.</p>
+      {historical && <p className="proceeds-history-note" role="status">Du ser et tidligere trin. Trinnet er skrivebeskyttet.</p>}
+      {historical && <button className="button button-secondary proceeds-continue" type="button" onClick={() => onAction({ type: 'returnToCurrentStep' })}>Tilbage til aktuelt trin</button>}
       {canContinue && <button className="button button-primary proceeds-continue" type="button" onClick={() => onAction({ type: 'continueToNextStep' })}>Fortsæt til Ydelsesplan</button>}
     </aside>
     <div className="work-card proceeds-statement">

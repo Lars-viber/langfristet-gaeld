@@ -41,6 +41,13 @@ describe('L7 shell structure', () => {
     expect(historyHtml).not.toContain('historical-banner');
     expect(historyHtml).toMatch(/class="schedule-reference"[^>]*>[\s\S]*Tilbage til aktuelt trin[\s\S]*<\/aside>/);
     expect(historyHtml).not.toContain('Fortsæt til Effektiv rente');
+    const proceedsHistory = render({ ...historical, viewingStep: 'proceeds' });
+    expect(proceedsHistory).not.toContain('historical-banner');
+    expect(proceedsHistory).toMatch(/class="proceeds-reference"[^>]*>[\s\S]*Du ser et tidligere trin[\s\S]*Tilbage til aktuelt trin[\s\S]*<\/aside>/);
+    expect(proceedsHistory).not.toContain('Fortsæt til Ydelsesplan');
+    const laterHistory = render({ ...historical, viewingStep: 'amortizedCost' });
+    expect(laterHistory).not.toContain('historical-banner');
+    expect(laterHistory).toContain('Tilbage til aktuelt trin');
     const completed: StudentState = {
       ...base, currentStep: 'completion', viewingStep: 'completion',
       completedSteps: [...STUDENT_STEPS], sessionStatus: 'completed',
@@ -48,5 +55,16 @@ describe('L7 shell structure', () => {
     const completedHtml = render(completed);
     expect(completedHtml).toContain('Niveau 1 gennemført');
     expect(completedHtml).toContain('Kun visning');
+  });
+
+  it('keeps the active schedule check action in the left information box', () => {
+    const base = fresh();
+    const approved = { raw: '=1+1', approved: true, errorCode: null };
+    const state: StudentState = { ...base, currentStep: 'contractSchedule', viewingStep: 'contractSchedule', completedSteps: ['proceeds'],
+      schedule: { ...base.schedule, annuityPaymentCalculated: true,
+        prerequisites: { principal: approved, termRate: approved, termCount: approved } } };
+    const html = render(state);
+    expect(html).toMatch(/class="schedule-reference"[^>]*>[\s\S]*Kontrollér termin 1[\s\S]*<\/aside>/);
+    expect(html.match(/Kontrollér termin 1/g)).toHaveLength(1);
   });
 });

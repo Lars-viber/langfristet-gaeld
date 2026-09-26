@@ -13,6 +13,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
   const step = state.viewingStep;
   const copy = STEP_COPY[step];
   const readOnly = !canEditStep(state, step);
+  const historical = state.viewingStep !== state.currentStep;
   const steps = STUDENT_STEPS;
   const nextStep = steps[steps.indexOf(step as typeof STUDENT_STEPS[number]) + 1];
   const canContinue = state.sessionStatus === 'active' && state.viewingStep === state.currentStep
@@ -26,7 +27,8 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
           <h2 id="step-heading">{copy.title}</h2>
           <p>{copy.description}</p>
         </div>
-        <span className={`step-mode ${readOnly ? 'is-readonly' : ''}`}>{readOnly ? 'Kun visning' : 'Aktuelt trin'}</span>
+        {historical ? <div className="step-history-inline"><span>Du ser et tidligere trin. Trinnet er skrivebeskyttet.</span><button className="button button-secondary" type="button" onClick={() => onAction({ type: 'returnToCurrentStep' })}>Tilbage til aktuelt trin</button></div>
+          : <span className={`step-mode ${readOnly ? 'is-readonly' : ''}`}>{readOnly ? 'Kun visning' : 'Aktuelt trin'}</span>}
       </div>}
       {step === 'proceeds' ? <ProceedsStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'contractSchedule' ? <ContractScheduleStep state={state} onAction={onAction} readOnly={readOnly} />

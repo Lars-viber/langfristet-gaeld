@@ -101,6 +101,8 @@ describe('R3 effective interest', () => {
     expect(currentHtml).toContain('Din opgave: Udfyld termin 0, termin 1 og termin 2.');
     expect(currentHtml).toMatch(/<th scope="col">Termin<\/th><th scope="col">Dato<\/th><th scope="col">Fortegn<\/th><th scope="col">Beløb<\/th>/);
     expect(currentHtml).toContain('placeholder="Indtast positivt beløb"');
+    expect(currentHtml).toMatch(/class="interest-table-top"[^>]*>[\s\S]*Din opgave:[\s\S]*Kontrollér termin 0[\s\S]*<\/div>/);
+    expect(currentHtml.match(/Kontrollér termin 0/g)).toHaveLength(1);
     expect(html(step3(r6))).toContain('termin 2 og sidste termin');
     const historical = { ...current, currentStep: 'amortizedCost' as const, viewingStep: 'effectiveInterest' as const,
       completedSteps: [...current.completedSteps, 'effectiveInterest' as const] };

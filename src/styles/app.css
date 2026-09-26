@@ -81,9 +81,6 @@
 .progress-step.status-completed .progress-number { background: var(--success); color: white; }
 .progress-step.status-locked { opacity: .65; }
 .progress-step.is-viewing { outline: 3px solid var(--accent); outline-offset: -3px; }
-.historical-banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 1rem; padding: 1rem 1.2rem; border: 1px solid var(--accent); border-radius: var(--radius-md); background: var(--accent-soft); }
-.historical-banner strong { color: var(--primary-strong); }
-.historical-banner p { margin-top: .15rem; color: var(--text-muted); font-size: .86rem; }
 .completed-banner { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; padding: .9rem 1.15rem; border-radius: var(--radius-sm); background: var(--success-soft); color: var(--success); font-weight: 800; }
 .completed-banner span { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 50%; background: var(--success); color: white; }
 .step-shell { padding: clamp(1.35rem, 3vw, 2.2rem); }
@@ -116,7 +113,7 @@
   .intro-aside { min-height: 200px; padding: 1.4rem; }
   .loan-grid { grid-template-columns: minmax(0, 1fr); }
   .loan-card { min-height: 190px; }
-  .start-row, .resume-card, .historical-banner { align-items: stretch; flex-direction: column; }
+  .start-row, .resume-card { align-items: stretch; flex-direction: column; }
   .resume-actions { align-items: stretch; flex-direction: column; }
   .resume-actions .button, .start-row .button { width: 100%; }
   .case-header { padding: 1.2rem; }
@@ -568,13 +565,10 @@
 .schedule-table .table-field.is-approved input { border-color: #8CBDAB; background: #F0F8F4; }
 .schedule-table .table-result { display: flex; justify-content: flex-end; gap: .2rem; margin-top: .12rem; color: var(--success); font-size: .64rem; font-variant-numeric: tabular-nums; text-align: right; }
 .schedule-table .validation-message { margin-top: .12rem; font-size: .61rem; }
-.schedule-row-action { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .45rem; font-size: .72rem; }
-.schedule-row-action span { color: var(--text-muted); }
-.schedule-row-action .button { min-height: 34px; padding: .3rem .5rem; font-size: .7rem; }
 .schedule-complete-note { margin: .45rem 0 0; color: var(--success); font-size: .72rem; font-weight: 750; }
 @media (min-width: 1000px) { .schedule-setup-grid:has(.schedule-app-action) { grid-template-columns: minmax(140px, 1.15fr) minmax(150px, 1.2fr) minmax(150px, 1.15fr) minmax(110px, .8fr) minmax(130px, .9fr); } }
 @media (max-width: 760px) { .r2-schedule-work { grid-template-columns: minmax(0, 1fr); }.schedule-reference { min-height: 0; }.schedule-continue { margin-top: .65rem; }.schedule-setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 500px) { .schedule-setup-grid { grid-template-columns: minmax(0, 1fr); }.schedule-row-action { align-items: stretch; flex-direction: column; }.schedule-row-action .button { width: 100%; } }
+@media (max-width: 500px) { .schedule-setup-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* R3: effective interest workspace. */
 .r3-interest-work { display: grid; grid-template-columns: minmax(205px, .28fr) minmax(0, 1fr); gap: .65rem; align-items: stretch; min-width: 0; }
@@ -618,12 +612,40 @@
 .interest-sign-choice input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
 .interest-sign { color: var(--primary-strong); font-size: 1rem; font-weight: 800; }
 .interest-approved { display: inline-block; margin-left: .3rem; color: var(--success); font-weight: 800; }
-.interest-row-action { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .4rem; font-size: .72rem; }
-.interest-row-action span { color: var(--text-muted); }
-.interest-row-action .button, .interest-rate-row .button { min-height: 34px; padding: .3rem .55rem; font-size: .72rem; }
+.interest-rate-row .button { min-height: 34px; padding: .3rem .55rem; font-size: .72rem; }
 .interest-rate-row { display: flex; align-items: center; gap: .8rem; min-width: 0; }
 .interest-rate-result { display: flex; align-items: center; gap: .7rem; color: var(--primary-strong); font-size: .75rem; }
 .interest-rate-result output { padding: .3rem .55rem; border: 1px solid #C3D7EB; border-radius: 5px; background: #EDF4FC; font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .interest-precision-note { margin: 0; color: var(--text-muted); font-size: .68rem; line-height: 1.3; }
 @media (max-width: 760px) { .r3-interest-work { grid-template-columns: minmax(0, 1fr); }.interest-reference { min-height: 0; }.interest-continue { margin-top: .65rem; } }
-@media (max-width: 500px) { .interest-row-action, .interest-rate-row, .interest-rate-result { align-items: stretch; flex-direction: column; }.interest-row-action .button { width: 100%; }.interest-rate-result { gap: .25rem; } }
+@media (max-width: 500px) { .interest-rate-row, .interest-rate-result { align-items: stretch; flex-direction: column; }.interest-rate-result { gap: .25rem; } }
+
+/* R3.1: compact shared reference and in-context actions. */
+@media (min-width: 761px) {
+  .case-overview { position: sticky; top: 0; z-index: 10; background: var(--bg); }
+  .task-introduction { position: static; }
+}
+.proceeds-reference .proceeds-history-note { margin-top: .65rem; color: var(--primary-strong); font-weight: 700; }
+.step-history-inline { display: flex; align-items: center; gap: .5rem; margin-left: auto; color: var(--primary-strong); font-size: .72rem; font-weight: 700; }
+.step-history-inline .button { min-height: 34px; padding: .3rem .5rem; font-size: .72rem; }
+.schedule-setup { padding-top: .5rem; padding-bottom: .55rem; }
+.schedule-setup-grid { row-gap: .3rem; }
+.schedule-setup-control input, .schedule-setup-control .button, .schedule-app-action > .button { min-height: 34px; }
+.schedule-setup-control input { padding-top: .22rem; padding-bottom: .22rem; }
+.schedule-setup-result { margin-top: .08rem; }
+.schedule-app-action output { height: 34px; }
+.interest-payment-reference { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.interest-payment-scroll { flex: 1 1 auto; min-height: 0; max-height: 300px; }
+.interest-table-top { display: flex; align-items: center; justify-content: space-between; gap: .65rem; margin-bottom: .45rem; }
+.interest-table-top .interest-instruction { margin: 0; }
+.interest-table-top .button { flex: 0 0 auto; min-height: 34px; padding: .3rem .55rem; font-size: .72rem; }
+@media (max-width: 760px) {
+  .case-overview { position: static; }
+  .interest-payment-reference { flex: initial; }
+  .interest-payment-scroll { flex: initial; max-height: 260px; }
+  .step-history-inline { flex-wrap: wrap; justify-content: flex-end; }
+}
+@media (max-width: 500px) {
+  .interest-table-top { align-items: stretch; flex-direction: column; }
+  .interest-table-top .button { align-self: flex-start; }
+}

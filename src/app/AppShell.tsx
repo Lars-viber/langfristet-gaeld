@@ -3,7 +3,6 @@ import { deriveCompletedSummary } from '../student';
 import type { StudentAction, StudentState } from '../student';
 import { LOAN_TYPE_LABELS } from './labels';
 import { CaseHeader } from '../components/CaseHeader';
-import { HistoricalBanner } from '../components/HistoricalBanner';
 import { ProgressNav } from '../components/ProgressNav';
 import { StepShell } from '../components/StepShell';
 
@@ -16,7 +15,6 @@ interface AppShellProps {
 
 export function AppShell({ state, onAction, onReset, onNewCase }: AppShellProps) {
   const [showCompletedWork, setShowCompletedWork] = useState(false);
-  const historical = state.viewingStep !== state.currentStep;
   const summary = deriveCompletedSummary(state);
   const showWork = !summary || showCompletedWork;
   const money = (raw: string) => {
@@ -59,7 +57,6 @@ export function AppShell({ state, onAction, onReset, onNewCase }: AppShellProps)
         <button className="button button-primary" type="button" onClick={() => setShowCompletedWork(true)}>Se afsluttet opgave</button>
       </section>}
       {showWork && <>
-        {historical && state.viewingStep !== 'contractSchedule' && state.viewingStep !== 'effectiveInterest' && <HistoricalBanner onReturn={() => onAction({ type: 'returnToCurrentStep' })} />}
         <StepShell state={state} onAction={onAction} />
       </>}
     </main>
