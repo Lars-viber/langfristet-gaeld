@@ -37,15 +37,16 @@ function approveSubrow(state: StudentState, term: number, subtable: 'income' | '
   const last = state.generatedCase.loanType === 'bullet' && term === state.caseResult.contract.rows.length
     ? lastManualTermValues(state.caseResult.incomeSchedule[term - 1]!, state.caseResult.carryingSchedule[term - 1]!, state.caseResult.effectiveInterest.rate) : null;
   const fields = subtable === 'income'
-    ? ['nominalInterest', 'amortization', 'totalInterestExpense'] as const
+    ? ['nominalInterest', 'totalInterestExpense', 'amortization'] as const
     : ['openingCarryingAmount', 'principalRepayment', 'amortization', 'closingCarryingAmount'] as const;
   for (const field of fields) {
     const value = last && (field === 'totalInterestExpense' || field === 'amortization' || field === 'closingCarryingAmount')
       ? last[field] : (row as unknown as Record<string, { toFixed(places: number): string }>)[field]!;
     const transfer = subtable === 'income' ? field === 'nominalInterest' : field !== 'closingCarryingAmount';
     state = take(state, { type: 'editAmortizationField', term, subtable, field, raw: transfer ? number(value) : formula(value) });
+    if (subtable === 'income') state = take(state, { type: 'checkAmortizationSubrow', term, subtable });
   }
-  state = take(state, { type: 'checkAmortizationSubrow', term, subtable });
+  if (subtable === 'balance') state = take(state, { type: 'checkAmortizationSubrow', term, subtable });
   expect(state.amortization.terms[term]?.[`${subtable}Approved`]).toBe(true);
   return state;
 }
@@ -86,15 +87,37 @@ describe('L8C amortization and year bookkeeping', () => {
     expect(amortizationSubrowStatus(state, 1, 'balance')).toBe('locked');
   });
 
-  it('locks only correct fields in an active result row', () => {
+  it('shows the full-precision token and validates Resultat in dependency order', () => {
     let state = atStep5(r1);
+    const starting = render(state);
+    expect(starting).toContain('Afventer renteomkostning i alt');
+    expect(starting).toContain('Afventer nominel rente');
+    expect(take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'amortization', raw: '=1+1' })).toBe(state);
+    state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
+    expect(state.amortization.terms[1]?.income.nominalInterest?.errorCode).not.toBeNull();
+    expect(state.amortization.terms[1]?.income.amortization?.errorCode ?? null).toBeNull();
     state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'nominalInterest', raw: '560000' });
-    state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'amortization', raw: '=1+1' });
     state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
     expect(state.amortization.terms[1]?.income.nominalInterest?.approved).toBe(true);
-    expect(state.amortization.terms[1]?.income.amortization?.approved).toBe(false);
+    const afterNominal = render(state);
+    expect(afterNominal).toContain('Brug = og [Effektiv rente · fuld præcision]');
+    expect(afterNominal).toContain('Afventer renteomkostning i alt');
+    expect(take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'amortization', raw: '=1+1' })).toBe(state);
+    state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
+    expect(state.amortization.terms[1]?.income.totalInterestExpense?.errorCode).not.toBeNull();
+    expect(state.amortization.terms[1]?.income.amortization?.errorCode ?? null).toBeNull();
+    const expenseRaw = '=6.590.000*[Effektiv rente · fuld præcision]';
+    state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'totalInterestExpense', raw: expenseRaw });
+    state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
+    expect(state.amortization.terms[1]?.income.totalInterestExpense?.approved).toBe(true);
+    expect(render(state)).toContain(`value="${expenseRaw}"`);
+    expect(render(state)).not.toContain(state.caseResult.effectiveInterest.rate.toString());
+    const amortization = state.caseResult.incomeSchedule[0]!.amortization;
+    state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'amortization', raw: formula(amortization) });
+    state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
+    expect(state.amortization.terms[1]?.incomeApproved).toBe(true);
     expect(take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'nominalInterest', raw: '=2+2' })).toBe(state);
-    expect(amortizationSubrowStatus(state, 1, 'balance')).toBe('locked');
+    expect(amortizationSubrowStatus(state, 1, 'balance')).toBe('active');
     expect(render(state)).toContain('560.000,00 kr.');
   });
 
@@ -146,8 +169,10 @@ describe('L8C amortization and year bookkeeping', () => {
     }
     const rawExpense = `=${number(state.caseResult.carryingSchedule[count - 1]!.openingCarryingAmount)}*[Effektiv rente · fuld præcision]`;
     state = take(state, { type: 'editAmortizationField', term: count, subtable: 'income', field: 'nominalInterest', raw: number(state.caseResult.incomeSchedule[count - 1]!.nominalInterest) });
-    state = take(state, { type: 'editAmortizationField', term: count, subtable: 'income', field: 'amortization', raw: formula(last.amortization) });
+    state = take(state, { type: 'checkAmortizationSubrow', term: count, subtable: 'income' });
     state = take(state, { type: 'editAmortizationField', term: count, subtable: 'income', field: 'totalInterestExpense', raw: rawExpense });
+    state = take(state, { type: 'checkAmortizationSubrow', term: count, subtable: 'income' });
+    state = take(state, { type: 'editAmortizationField', term: count, subtable: 'income', field: 'amortization', raw: formula(last.amortization) });
     state = take(state, { type: 'checkAmortizationSubrow', term: count, subtable: 'income' });
     expect(state.amortization.terms[count]?.incomeApproved).toBe(true);
     state = approveSubrow(state, count, 'balance');
@@ -181,6 +206,7 @@ describe('L8C amortization and year bookkeeping', () => {
     const term = state.caseResult.contract.rows.length;
     const nominal = state.caseResult.incomeSchedule[term - 1]!.nominalInterest;
     state = take(state, { type: 'editAmortizationField', term, subtable: 'income', field: 'nominalInterest', raw: number(nominal) });
+    state = take(state, { type: 'checkAmortizationSubrow', term, subtable: 'income' });
     state = take(state, { type: 'editAmortizationField', term, subtable: 'income', field: 'totalInterestExpense', raw: '=328101,04' });
     state = take(state, { type: 'checkAmortizationSubrow', term, subtable: 'income' });
     expect(state.amortization.terms[term]?.income.totalInterestExpense?.approved).toBe(false);
@@ -210,10 +236,12 @@ describe('L8C amortization and year bookkeeping', () => {
   it('accepts the full precision IA reference and preserves raw formulas through restore', () => {
     const adapter = createMemorySessionStorage();
     let state = atStep5(r1);
+    state = transitionStudentSession(adapter, state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'nominalInterest', raw: number(state.caseResult.incomeSchedule[0]!.nominalInterest) }).state;
+    state = transitionStudentSession(adapter, state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' }).state;
     state = transitionStudentSession(adapter, state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'totalInterestExpense', raw: '=6.590.000*[Effektiv rente · fuld præcision]' }).state;
     state = transitionStudentSession(adapter, state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' }).state;
     expect(state.amortization.terms[1]?.income.totalInterestExpense?.approved).toBe(true);
-    expect(state.amortization.terms[1]?.income.nominalInterest?.approved).toBe(false);
+    expect(state.amortization.terms[1]?.income.nominalInterest?.approved).toBe(true);
     const loaded = loadStudentSession(adapter);
     expect(loaded.status).toBe('restored');
     if (loaded.status !== 'restored') throw new Error('Restore failed');

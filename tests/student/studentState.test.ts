@@ -91,12 +91,12 @@ function approveAmortization(state: StudentState): StudentState {
     const income = model.incomeSchedule[term - 1]!;
     const ordinary = state.generatedCase.loanType === 'bullet' && term === count
       ? lastManualTermValues(income, model.carryingSchedule[term - 1]!, model.effectiveInterest.rate) : null;
-    for (const field of ['nominalInterest', 'amortization', 'totalInterestExpense'] as const) {
+    for (const field of ['nominalInterest', 'totalInterestExpense', 'amortization'] as const) {
       const value = ordinary && field !== 'nominalInterest' ? ordinary[field] : income[field];
       state = take(state, { type: 'editAmortizationField', term, subtable: 'income', field,
         raw: field === 'nominalInterest' ? dk(value.toFixed(2)) : formula(value) });
+      state = take(state, { type: 'checkAmortizationSubrow', term, subtable: 'income' });
     }
-    state = take(state, { type: 'checkAmortizationSubrow', term, subtable: 'income' });
     const balance = model.carryingSchedule[term - 1]!;
     for (const field of ['openingCarryingAmount', 'principalRepayment', 'amortization', 'closingCarryingAmount'] as const) {
       const value = ordinary && (field === 'amortization' || field === 'closingCarryingAmount') ? ordinary[field] : balance[field];

@@ -8,7 +8,7 @@ import {
 } from '../validation';
 import type { StudentPostingLine, ValidationResult } from '../validation';
 import {
-  amortizationSubrowStatus, canCalculateAnnuityPayment, canEditStep, canViewStep, cashFlowRowStatus,
+  amortizationIncomeFieldReady, amortizationSubrowStatus, canCalculateAnnuityPayment, canEditStep, canViewStep, cashFlowRowStatus,
   classificationStage, manualTerms, prerequisitesApproved, scheduleRowStatus,
 } from './selectors';
 import { STUDENT_STATE_VERSION, STUDENT_STEPS } from './types';
@@ -277,6 +277,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       if (!allowed(state, 'amortizedCost') || amortizationSubrowStatus(state, action.term, action.subtable) !== 'active') return state;
       const validFields = action.subtable === 'income' ? incomeFields() : balanceFields();
       if (!(validFields as string[]).includes(action.field)) return state;
+      if (action.subtable === 'income' && !amortizationIncomeFieldReady(state, action.term, action.field as IncomeField)) return state;
       const term = state.amortization.terms[action.term];
       if (term?.[action.subtable][action.field as IncomeField & BalanceField]?.approved) return state;
       const next = copy(state); const target = (next.amortization.terms[action.term] ??= amortizationTerm())[action.subtable] as Partial<Record<typeof action.field, FieldState>>;
@@ -293,6 +294,10 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       const target = term[action.subtable] as Partial<Record<IncomeField | BalanceField, FieldState>>;
       const keys = action.subtable === 'income' ? incomeFields() : balanceFields();
       for (const key of keys) {
+        if (action.subtable === 'income' && !amortizationIncomeFieldReady(state, action.term, key as IncomeField)) {
+          if (target[key] && !target[key].approved) target[key].errorCode = null;
+          continue;
+        }
         const entry = target[key] ??= field();
         const ordinaryExpected = manualLast && (key === 'totalInterestExpense' || key === 'amortization' || key === 'closingCarryingAmount')
           ? manualLast[key] : expected[key as keyof typeof expected] as InstanceType<typeof D>;

@@ -1,5 +1,5 @@
 import { lastManualTermValues } from '../domain';
-import { amortizationSubrowStatus, deriveStudentView } from '../student';
+import { amortizationIncomeFieldReady, amortizationSubrowStatus, deriveStudentView } from '../student';
 import type { BalanceField, IncomeField, StudentAction, StudentState } from '../student/types';
 import type { ValidationErrorCode } from '../validation';
 import { ValidationMessage } from './ValidationMessage';
@@ -68,20 +68,28 @@ export function AmortizationStep({ state, onAction, readOnly }: {
                   ? manualLast[column] : authoritative;
                 const adjustedCell = adjusted && row.term === count &&
                   (column === 'totalInterestExpense' || column === 'amortization' || column === 'closingCarryingAmount');
+                const waiting = status === 'active' && subtable === 'income'
+                  && !amortizationIncomeFieldReady(state, row.term, column as IncomeField) && !entry?.approved;
+                const placeholder = subtable === 'income' && column === 'totalInterestExpense'
+                  ? waiting ? 'Afventer nominel rente' : 'Brug = og [Effektiv rente · fuld præcision]'
+                  : subtable === 'income' && column === 'amortization' && waiting
+                    ? 'Afventer renteomkostning i alt'
+                    : isTransfer(subtable, column) ? 'Indtast beløb'
+                      : column === 'amortization' || column === 'closingCarryingAmount' ? 'Beregn et positivt beløb med =' : 'Beregn med =';
                 return <td key={column}>{status === 'appCalculated' ? <span className="calculated-value">{money(authoritative)}</span>
                   : status === 'locked' ? <span className="empty-value">—</span>
                     : <div className={`table-field amortization-field ${entry?.approved ? 'is-approved' : ''}`}>
                       <input id={id} aria-label={`Termin ${row.term}, ${title}, ${labels[column]}`} type="text" inputMode="decimal"
+                        className={subtable === 'income' && column === 'totalInterestExpense' ? 'amortization-interest-expense-input' : undefined}
                         autoComplete="off" spellCheck={false} value={entry?.raw ?? ''}
-                        placeholder={isTransfer(subtable, column) ? 'Indtast beløb'
-                          : column === 'amortization' || column === 'closingCarryingAmount' ? 'Beregn et positivt beløb med =' : 'Beregn med ='}
+                        placeholder={placeholder} disabled={waiting}
                         readOnly={readOnly || Boolean(entry?.approved)}
                         onChange={(event) => onAction({ type: 'editAmortizationField', term: row.term, subtable, field: column, raw: event.target.value })}
-                        aria-invalid={entry?.errorCode ? true : undefined}
-                        aria-describedby={entry?.errorCode ? `${id}-feedback` : undefined} />
+                        aria-invalid={!waiting && entry?.errorCode ? true : undefined}
+                        aria-describedby={!waiting && entry?.errorCode ? `${id}-feedback` : undefined} />
                       {entry?.approved && <span className="amortization-result">{money(ordinary)} kr. <span aria-label="Godkendt">✓</span></span>}
                       {adjustedCell && <span className="amortization-adjusted">Efter afrunding: {money(authoritative)} kr.</span>}
-                      <ValidationMessage code={entry?.errorCode ?? null} id={`${id}-feedback`} />
+                      <ValidationMessage code={waiting ? null : entry?.errorCode ?? null} id={`${id}-feedback`} />
                     </div>}</td>;
               })}</tr>;
           })}</tbody></table>

@@ -1,5 +1,5 @@
 import { STUDENT_STEPS } from './types';
-import type { RowStatus, StepStatus, StudentState, StudentStep, StudentSummary } from './types';
+import type { IncomeField, RowStatus, StepStatus, StudentState, StudentStep, StudentSummary } from './types';
 
 export function stepStatus(state: StudentState, step: StudentStep): StepStatus {
   if (state.completedSteps.includes(step)) return 'completed';
@@ -46,6 +46,12 @@ export function amortizationSubrowStatus(state: StudentState, term: number, subt
   const activeTerm = manual.find((candidate) => !state.amortization.terms[candidate]?.approved);
   const activeSubtable = row?.incomeApproved ? 'balance' : 'income';
   return state.currentStep === 'amortizedCost' && term === activeTerm && subtable === activeSubtable ? 'active' : 'locked';
+}
+export function amortizationIncomeFieldReady(state: StudentState, term: number, field: IncomeField): boolean {
+  const income = state.amortization.terms[term]?.income;
+  if (field === 'nominalInterest') return true;
+  if (field === 'totalInterestExpense') return Boolean(income?.nominalInterest?.approved);
+  return Boolean(income?.nominalInterest?.approved && income?.totalInterestExpense?.approved);
 }
 export function prerequisitesApproved(state: StudentState): boolean {
   const required = state.generatedCase.loanType === 'serial'
