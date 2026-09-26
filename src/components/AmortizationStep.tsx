@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { lastManualTermValues } from '../domain';
 import { amortizationIncomeFieldReady, amortizationSubrowStatus, deriveStudentView } from '../student';
 import type { BalanceField, IncomeField, StudentAction, StudentState } from '../student/types';
@@ -19,10 +20,28 @@ const money = (value: { toFixed(places: number): string }) => {
 };
 const isTransfer = (subtable: Subtable, column: Column) => subtable === 'income' ? column === 'nominalInterest'
   : column === 'openingCarryingAmount' || column === 'principalRepayment' || column === 'amortization';
+export const EFFECTIVE_RATE_REFERENCE = '[Effektiv rente · fuld præcision]';
+
+export function insertEffectiveRateReference(raw: string, start: number, end: number) {
+  if (raw.includes(EFFECTIVE_RATE_REFERENCE)) return { raw, caret: start };
+  const from = Math.max(0, Math.min(start, raw.length));
+  const to = Math.max(from, Math.min(end, raw.length));
+  return { raw: `${raw.slice(0, from)}${EFFECTIVE_RATE_REFERENCE}${raw.slice(to)}`,
+    caret: from + EFFECTIVE_RATE_REFERENCE.length };
+}
 
 export function AmortizationStep({ state, onAction, readOnly }: {
   state: StudentState; onAction(action: StudentAction): void; readOnly: boolean;
 }) {
+  const expenseInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingCaretRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (pendingCaretRef.current === null || !expenseInputRef.current) return;
+    const caret = pendingCaretRef.current;
+    pendingCaretRef.current = null;
+    expenseInputRef.current.focus();
+    expenseInputRef.current.setSelectionRange(caret, caret);
+  }, [state]);
   const view = deriveStudentView(state);
   const count = state.caseResult.contract.rows.length;
   const standing = state.generatedCase.loanType === 'bullet';
@@ -71,7 +90,7 @@ export function AmortizationStep({ state, onAction, readOnly }: {
                 const waiting = status === 'active' && subtable === 'income'
                   && !amortizationIncomeFieldReady(state, row.term, column as IncomeField) && !entry?.approved;
                 const placeholder = subtable === 'income' && column === 'totalInterestExpense'
-                  ? waiting ? 'Afventer nominel rente' : 'Brug = og [Effektiv rente · fuld præcision]'
+                  ? waiting ? 'Afventer nominel rente' : 'Beregn med ='
                   : subtable === 'income' && column === 'amortization' && waiting
                     ? 'Afventer renteomkostning i alt'
                     : isTransfer(subtable, column) ? 'Indtast beløb'
@@ -79,14 +98,28 @@ export function AmortizationStep({ state, onAction, readOnly }: {
                 return <td key={column}>{status === 'appCalculated' ? <span className="calculated-value">{money(authoritative)}</span>
                   : status === 'locked' ? <span className="empty-value">—</span>
                     : <div className={`table-field amortization-field ${entry?.approved ? 'is-approved' : ''}`}>
+                      <div className={subtable === 'income' && column === 'totalInterestExpense' && status === 'active' && !readOnly && !waiting && !entry?.approved
+                        ? 'amortization-token-control' : undefined}>
                       <input id={id} aria-label={`Termin ${row.term}, ${title}, ${labels[column]}`} type="text" inputMode="decimal"
-                        className={subtable === 'income' && column === 'totalInterestExpense' ? 'amortization-interest-expense-input' : undefined}
+                        ref={subtable === 'income' && column === 'totalInterestExpense' && status === 'active' && !readOnly ? expenseInputRef : undefined}
                         autoComplete="off" spellCheck={false} value={entry?.raw ?? ''}
                         placeholder={placeholder} disabled={waiting}
                         readOnly={readOnly || Boolean(entry?.approved)}
                         onChange={(event) => onAction({ type: 'editAmortizationField', term: row.term, subtable, field: column, raw: event.target.value })}
                         aria-invalid={!waiting && entry?.errorCode ? true : undefined}
                         aria-describedby={!waiting && entry?.errorCode ? `${id}-feedback` : undefined} />
+                      {subtable === 'income' && column === 'totalInterestExpense' && status === 'active' && !readOnly && !waiting && !entry?.approved &&
+                        <button className="amortization-insert-rate" type="button" disabled={Boolean(entry?.raw.includes(EFFECTIVE_RATE_REFERENCE))}
+                          title="Indsætter den effektive rente med fuld beregningspræcision i formlen."
+                          onClick={() => {
+                            const raw = entry?.raw ?? '';
+                            const input = expenseInputRef.current;
+                            const inserted = insertEffectiveRateReference(raw, input?.selectionStart ?? raw.length, input?.selectionEnd ?? raw.length);
+                            if (inserted.raw === raw) return;
+                            pendingCaretRef.current = inserted.caret;
+                            onAction({ type: 'editAmortizationField', term: row.term, subtable: 'income', field: 'totalInterestExpense', raw: inserted.raw });
+                          }}>Indsæt effektiv rente</button>}
+                      </div>
                       {entry?.approved && <span className="amortization-result">{money(ordinary)} kr. <span aria-label="Godkendt">✓</span></span>}
                       {adjustedCell && <span className="amortization-adjusted">Efter afrunding: {money(authoritative)} kr.</span>}
                       <ValidationMessage code={waiting ? null : entry?.errorCode ?? null} id={`${id}-feedback`} />

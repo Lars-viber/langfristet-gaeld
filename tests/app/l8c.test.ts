@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { AppShell } from '../../src/app/AppShell';
+import { AmortizationStep, EFFECTIVE_RATE_REFERENCE, insertEffectiveRateReference } from '../../src/components/AmortizationStep';
 import { lastManualTermValues } from '../../src/domain';
 import { transitionStudentSession } from '../../src/app/controller';
 import { createMemorySessionStorage, loadStudentSession, saveStudentSession } from '../../src/persistence';
@@ -100,7 +101,8 @@ describe('L8C amortization and year bookkeeping', () => {
     state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
     expect(state.amortization.terms[1]?.income.nominalInterest?.approved).toBe(true);
     const afterNominal = render(state);
-    expect(afterNominal).toContain('Brug = og [Effektiv rente · fuld præcision]');
+    expect(afterNominal).toContain('placeholder="Beregn med ="');
+    expect(afterNominal).toContain('Indsæt effektiv rente');
     expect(afterNominal).toContain('Afventer renteomkostning i alt');
     expect(take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'amortization', raw: '=1+1' })).toBe(state);
     state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
@@ -110,6 +112,7 @@ describe('L8C amortization and year bookkeeping', () => {
     state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'totalInterestExpense', raw: expenseRaw });
     state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
     expect(state.amortization.terms[1]?.income.totalInterestExpense?.approved).toBe(true);
+    expect(render(state)).not.toContain('>Indsæt effektiv rente</button>');
     expect(render(state)).toContain(`value="${expenseRaw}"`);
     expect(render(state)).not.toContain(state.caseResult.effectiveInterest.rate.toString());
     const amortization = state.caseResult.incomeSchedule[0]!.amortization;
@@ -153,6 +156,25 @@ describe('L8C amortization and year bookkeeping', () => {
     expect(amortizationSubrowStatus(state, 3, 'income')).toBe('appCalculated');
     expect(amortizationSubrowStatus(state, 20, 'income')).toBe('active');
     expect(state.amortization.remainingCalculated).toBe(false);
+  });
+
+  it('inserts only the rate reference at the caret and never duplicates it', () => {
+    const initial = atStep5(r1);
+    expect(render(initial)).not.toContain('>Indsæt effektiv rente</button>');
+    const prefix = '=11227500*';
+    const inserted = insertEffectiveRateReference(prefix, prefix.length, prefix.length);
+    expect(inserted).toEqual({ raw: `${prefix}${EFFECTIVE_RATE_REFERENCE}`, caret: prefix.length + EFFECTIVE_RATE_REFERENCE.length });
+    expect(insertEffectiveRateReference('', 0, 0).raw).toBe(EFFECTIVE_RATE_REFERENCE);
+    expect(insertEffectiveRateReference(inserted.raw, inserted.caret, inserted.caret).raw).toBe(inserted.raw);
+    expect(insertEffectiveRateReference('=100+200', 1, 1).raw).toBe(`=${EFFECTIVE_RATE_REFERENCE}100+200`);
+    let state = take(initial, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'nominalInterest', raw: '560000' });
+    state = take(state, { type: 'checkAmortizationSubrow', term: 1, subtable: 'income' });
+    expect(render(state)).toContain('>Indsæt effektiv rente</button>');
+    state = take(state, { type: 'editAmortizationField', term: 1, subtable: 'income', field: 'totalInterestExpense', raw: inserted.raw });
+    expect(state.amortization.terms[1]?.income.totalInterestExpense?.raw).toBe(inserted.raw);
+    expect(render(state)).toContain('disabled="" title="Indsætter den effektive rente');
+    const readonly = renderToStaticMarkup(createElement(AmortizationStep, { state, onAction: () => {}, readOnly: true }));
+    expect(readonly).not.toContain('>Indsæt effektiv rente</button>');
   });
 
   it('accepts R5 ordinary last-term work, preserves it, and shows the separate cent adjustment', () => {
