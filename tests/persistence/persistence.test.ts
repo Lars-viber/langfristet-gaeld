@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { D } from '../../src/domain/decimal';
+import { calculateAccountBalances } from '../../src/domain';
 import * as generator from '../../src/generator';
 import { deserializeStudentSession, serializeStudentSession } from '../../src/persistence';
 import { STUDENT_STEPS, applyStudentAction, canEditStep, createStudentState, resetCurrentCase } from '../../src/student';
@@ -21,6 +22,35 @@ const reject = (value: unknown, code: string): void => {
 };
 
 describe('L6 serialization', () => {
+  it('restores v2 review before and after final completion without losing R6 work', () => {
+    const base = fresh();
+    const line = { account: '5820' as const, side: 'D' as const, amount: '=6.000.000+590.000' };
+    const accountBalances = calculateAccountBalances(base.caseResult.input, base.caseResult.postingEvents);
+    const balances = Object.fromEntries(accountBalances.filter((entry) => entry.status === 'balance').map((entry) =>
+      [entry.account, { raw: '=1.500.000+6.590.000', side: entry.side, approved: true, errorCode: null }]));
+    const bookkeeping = Object.fromEntries(Object.entries(base.bookkeeping).map(([term, blocks]) => [term, {
+      payment: { ...blocks.payment, approved: true }, amortization: { ...blocks.amortization, approved: true },
+    }]));
+    const review: StudentState = { ...base, currentStep: 'finalOverview', viewingStep: 'finalOverview',
+      completedSteps: [...STUDENT_STEPS.slice(0, 6)],
+      caseResult: { ...base.caseResult, accountBalances },
+      initialRecognition: { ...base.initialRecognition, lines: [line], approved: true },
+      bookkeeping,
+      classification: { ...base.classification, reclassification: { ...base.classification.reclassification, approved: true } },
+      completion: { ...base.completion, balances },
+      proceeds: { proceeds: { raw: '=7.000.000-410.000', approved: true, errorCode: null } },
+    };
+    const before = restored(review);
+    expect(before.schemaVersion).toBe(2);
+    expect(before.currentStep).toBe('finalOverview');
+    expect(before.sessionStatus).toBe('active');
+    const after = restored(applyStudentAction(before, { type: 'finishLevel1' }));
+    expect(after.sessionStatus).toBe('completed');
+    expect(after.completedSteps).toEqual(STUDENT_STEPS);
+    expect(after.initialRecognition.lines).toEqual([line]);
+    expect(after.completion.balances['5820']?.raw).toBe('=1.500.000+6.590.000');
+    expect(after.proceeds.proceeds?.raw).toBe('=7.000.000-410.000');
+  });
   it('roundtrips a fresh step-1 state through JSON', () => {
     const state = fresh();
     expect(restored(state)).toEqual(state);

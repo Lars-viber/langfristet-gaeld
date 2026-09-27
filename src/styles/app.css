@@ -745,18 +745,18 @@
 
 /* R6: one permanent bookkeeping desk, with the balance work on the same accounts. */
 .r6-work { display: grid; grid-template-columns: minmax(190px, .22fr) minmax(0, 1fr); gap: .65rem; align-items: stretch; min-width: 0; margin-top: 0; }
-.r6-info { display: flex; flex-direction: column; gap: .42rem; min-width: 0; padding: .75rem .8rem; border-radius: var(--radius-sm); background: var(--primary); color: #fff; }
-.r6-info h2 { margin: 0 0 .15rem; color: #fff; font-size: 1.08rem; }
-.r6-info p { margin: 0; color: #e1edf0; font-size: .76rem; line-height: 1.4; }
+.r6-info { gap: .42rem; color: var(--text); }
+.r6-info h2 { margin-bottom: .15rem; }
+.r6-info p { line-height: 1.4; }
 .r6-info .r6-phase { margin-top: .25rem; font-size: .82rem; }
-.r6-info .r6-block-name { color: #fff; font-size: .88rem; font-weight: 700; }
-.r6-info .r6-reference-value { display: grid; gap: .12rem; padding: .4rem 0; border-top: 1px solid #ffffff44; font-variant-numeric: tabular-nums; }
-.r6-info .r6-reference-value strong { color: #fff; }
-.r6-info .r6-history { padding: .3rem .45rem; border-left: 2px solid #b9dfef; background: #ffffff18; }
+.r6-info .r6-block-name { color: var(--primary-strong); font-size: .88rem; font-weight: 700; }
+.r6-info .r6-reference-value { display: grid; gap: .12rem; padding: .4rem 0; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.r6-info .r6-reference-value strong { color: var(--primary-strong); }
+.r6-info .r6-history { padding: .3rem .45rem; border-left: 2px solid var(--primary); background: var(--primary-light); }
 .r6-info .r6-error { padding: .3rem .4rem; border-radius: 4px; background: #fff2e8; color: #763619; }
 .r6-info-action { margin-top: auto; padding-top: .55rem; }
 .r6-info-action .button { width: 100%; min-height: 34px; padding: .32rem .45rem; font-size: .72rem; white-space: normal; }
-.r6-zero-answer label { display: inline-flex; gap: .2rem; align-items: center; margin: .2rem .65rem .1rem 0; color: #fff; font-size: .78rem; }
+.r6-zero-answer label { display: inline-flex; gap: .2rem; align-items: center; margin: .2rem .65rem .1rem 0; color: var(--text); font-size: .78rem; }
 .r6-main { display: grid; gap: .55rem; min-width: 0; align-content: start; }
 .r6-references { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; min-width: 0; }
 .r6-reference-card { min-width: 0; padding: .4rem .5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
@@ -798,3 +798,35 @@
 @media (max-width: 760px) { .r6-work { grid-template-columns: minmax(0, 1fr); }.r6-info-action { margin-top: .2rem; }.r6-references { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 540px) { .r6-accounts { grid-template-columns: minmax(0, 1fr); }.r6-reference-scroll { max-height: 105px; }.r6-account h3 { min-height: 0; } }
 @media (max-width: 500px) { .classification-statement-row { grid-template-columns: minmax(0, 1fr) minmax(140px, .9fr); } }
+
+/* R7: full, read-only review. The shared task and loan reference precede this workspace. */
+.r7-work { display: grid; grid-template-columns: minmax(190px, .22fr) minmax(0, 1fr); gap: .65rem; align-items: start; margin-top: 0; min-width: 0; }
+.r7-info { position: sticky; top: 110px; }
+.r7-info .r7-complete { margin-top: .7rem; color: var(--success); font-weight: 750; }
+.r7-main { display: grid; gap: .55rem; min-width: 0; }
+.r7-section { min-width: 0; padding: .65rem .7rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.r7-section h3 { margin: 0 0 .45rem; color: var(--primary-strong); font-size: .9rem; }
+.r7-proceeds { display: grid; gap: .25rem; }
+.r7-proceeds > div { display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding: .2rem 0; border-bottom: 1px solid var(--border); font-size: .73rem; }
+.r7-value { display: grid; gap: .08rem; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.r7-value small { display: block; min-width: 0; overflow-wrap: anywhere; color: var(--text-muted); font: .62rem Consolas, monospace; }
+.r7-value strong { color: var(--primary-strong); font-size: .73rem; white-space: nowrap; }
+.r7-table-scroll { max-height: 250px; overflow: auto; }
+.r7-table { width: 100%; min-width: 570px; margin: 0; font-size: .68rem; font-variant-numeric: tabular-nums; }
+.r7-table th, .r7-table td { padding: .22rem .3rem; }
+.r7-table thead th, .r7-table tbody th, .r7-table tbody td:nth-child(2) { text-align: center; }
+.r7-table tbody td:nth-child(n+3) { text-align: right; }
+.r7-table tbody td:nth-child(3):last-child { text-align: right; }
+.r7-rate { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.r7-rate h3 { margin: 0; }
+.r7-rate > strong { color: var(--primary-strong); font-variant-numeric: tabular-nums; }
+.r7-adjusted { display: block; color: var(--primary-strong); font-size: .6rem; white-space: nowrap; }
+.r7-rounding { margin: .35rem 0 0; color: var(--primary-strong); font-size: .69rem; }
+.r7-accounts h4 { min-height: 2.35em; margin: 0 0 .28rem; color: var(--primary-strong); font-size: .73rem; line-height: 1.17; overflow-wrap: anywhere; }
+.r7-accounts h4 span { font-weight: 800; }
+.r7-accounts .r6-saldo-approved small { overflow-wrap: anywhere; }
+.r7-posting-value { display: grid; min-width: 0; margin-left: auto; text-align: right; }
+.r7-posting-value small { overflow-wrap: anywhere; color: var(--text-muted); font: .58rem Consolas, monospace; }
+.r7-status p { margin: 0; color: var(--text-muted); font-size: .73rem; }
+.r7-final-action { display: flex; justify-content: flex-end; padding: .3rem 0 .1rem; }
+@media (max-width: 760px) { .r7-work { grid-template-columns: minmax(0, 1fr); }.r7-info { position: static; } }

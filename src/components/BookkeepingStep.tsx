@@ -42,7 +42,7 @@ export function BookkeepingStep({ state, onAction, readOnly }: {
   }
 
   return <div className="step-work r6-work">
-    <aside className="r6-info" aria-label="Vejledning til bogføring">
+    <aside className="r6-info classification-reference" aria-label="Vejledning til bogføring">
       <h2 id="step-heading">Bogføring</h2>
       {historical && <p className="r6-history" role="status">Du ser et tidligere trin. Trinnet er skrivebeskyttet.</p>}
       {active ? <>
@@ -107,7 +107,7 @@ export function BookkeepingStep({ state, onAction, readOnly }: {
           <div className="r6-thead"><span>Debet</span><span>Kredit</span></div>
           <div className="r6-tsides">{(['D', 'K'] as const).map((side) => <div className="r6-tside" key={side}>
             {number === '5820' && side === 'D' && new D(state.generatedCase.caseInput.openingBankBalance).gt(0)
-              && <div className="r6-posting is-opening"><span>Primo</span><strong>{money(new D(state.generatedCase.caseInput.openingBankBalance))}</strong></div>}
+              && <div className="r6-posting is-opening"><span>Saldo primo</span><strong>{money(new D(state.generatedCase.caseInput.openingBankBalance))}</strong></div>}
             {approved.filter(({ line }) => line.side === side).map(({ number: blockNumber, line }, index) => {
               const parsed = parsePostingAmount(line.amount);
               return <div className="r6-posting is-approved" key={`approved-${blockNumber}-${index}`}>

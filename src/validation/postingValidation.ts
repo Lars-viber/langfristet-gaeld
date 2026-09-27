@@ -45,6 +45,8 @@ export function validatePostingBlock(
   const errors = new Set<ValidationErrorCode>();
   const signed: Decimal[] = [];
   for (const line of studentLines) {
+    // An untouched draft is not a posting. Keep it in studentLines until approval.
+    if (line.amount.trim() === '') continue;
     if (!expected.has(line.account)) errors.add('IRRELEVANT_ACCOUNT');
     const parsed = parsePostingAmount(line.amount);
     if (!parsed.correct || !parsed.value) { errors.add(parsed.errorCode ?? 'INVALID_AMOUNT'); continue; }

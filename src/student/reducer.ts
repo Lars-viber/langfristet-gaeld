@@ -356,6 +356,7 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       if (!active || active.number !== action.number || active.expected.length === 0) return state;
       const next = copy(state); const target = bookkeepingBlockState(next, active);
       storeBlockCheck(target, validatePostingBlock(target.lines, active.expected));
+      if (target.approved) target.lines = target.lines.filter((line) => line.amount.trim() !== '');
       return next;
     }
     case 'editClassificationField': {
@@ -460,10 +461,9 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       return next;
     }
     case 'finishLevel1': {
-      if (!allowed(state, 'completion') || Object.values(state.completion.checks).some((passed) => !passed)) return state;
+      if (!allowed(state, 'finalOverview') || !STUDENT_STEPS.slice(0, -1).every((step) => state.completedSteps.includes(step))) return state;
       const next = copy(state);
       completeStep(next);
-      if (!next.completedSteps.includes('finalOverview')) next.completedSteps.push('finalOverview');
       next.sessionStatus = 'completed';
       return next;
     }

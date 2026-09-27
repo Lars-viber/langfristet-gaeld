@@ -14,7 +14,7 @@ const render = (state: StudentState) => renderToStaticMarkup(createElement(AppSh
 }));
 
 describe('L7 shell structure', () => {
-  it('shows only supplied case terms and eight labelled progress steps', () => {
+  it('shows only supplied case terms and seven labelled progress steps', () => {
     const state = fresh();
     const html = render(state);
     expect(html).toContain('Låneaftalen');
@@ -49,12 +49,13 @@ describe('L7 shell structure', () => {
     expect(laterHistory).not.toContain('historical-banner');
     expect(laterHistory).toContain('Tilbage til aktuelt trin');
     const completed: StudentState = {
-      ...base, currentStep: 'completion', viewingStep: 'completion',
+      ...base, currentStep: 'finalOverview', viewingStep: 'finalOverview',
       completedSteps: [...STUDENT_STEPS], sessionStatus: 'completed',
     };
     const completedHtml = render(completed);
-    expect(completedHtml).toContain('Niveau 1 gennemført');
-    expect(completedHtml).toContain('Kun visning');
+    expect(completedHtml).toContain('Niveau 1 er afsluttet');
+    expect(completedHtml).toContain('Ydelsesplan');
+    expect(completedHtml).not.toContain('completed-summary');
   });
 
   it('keeps the active schedule check action in the left information box', () => {

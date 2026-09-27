@@ -41,6 +41,30 @@ function approveActive(state: StudentState): StudentState {
 }
 
 describe('R6 permanent T-account workflow', () => {
+  it('ignores and discards only wholly empty draft rows, retaining non-empty validation', () => {
+    let state = atStep6(r1);
+    const active = activeBookkeepingBlock(state)!;
+    const correct = lines(active.expected);
+    const empty = { account: '6760' as const, side: 'D' as const, amount: '' };
+    state = applyStudentAction(state, { type: 'setPostingBlockLines', number: active.number, lines: [...correct, empty] });
+    state = applyStudentAction(state, { type: 'checkPostingBlock', number: active.number });
+    expect(state.initialRecognition.approved).toBe(true);
+    expect(state.initialRecognition.errors).toEqual([]);
+    expect(state.initialRecognition.lines).toEqual(correct);
+    for (const amount of ['100', 'abc']) {
+      let attempt = atStep6(r1);
+      attempt = applyStudentAction(attempt, { type: 'setPostingBlockLines', number: active.number, lines: [...correct, { ...empty, amount }] });
+      attempt = applyStudentAction(attempt, { type: 'checkPostingBlock', number: active.number });
+      expect(attempt.initialRecognition.approved).toBe(false);
+      expect(attempt.initialRecognition.lines.at(-1)?.amount).toBe(amount);
+    }
+  });
+
+  it('labels the read-only bank opening balance and uses the shared light panel', () => {
+    const html = renderToStaticMarkup(createElement(BookkeepingStep, { state: atStep6(r1), onAction: () => {}, readOnly: false }));
+    expect(html).toContain('Saldo primo');
+    expect(html).toContain('class="r6-info classification-reference"');
+  });
   it('shows all six accounts from entry and starts with manual origination', () => {
     const state = atStep6(r1);
     const html = renderToStaticMarkup(createElement(BookkeepingStep, { state, onAction: () => {}, readOnly: false }));

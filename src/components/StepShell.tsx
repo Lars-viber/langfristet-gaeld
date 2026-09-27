@@ -7,6 +7,7 @@ import { EffectiveInterestStep } from './EffectiveInterestStep';
 import { AmortizationStep } from './AmortizationStep';
 import { BookkeepingStep } from './BookkeepingStep';
 import { ClassificationStep } from './ClassificationStep';
+import { FinalOverviewStep } from './FinalOverviewStep';
 
 export function StepShell({ state, onAction }: { state: StudentState; onAction(action: StudentAction): void }) {
   const step = state.viewingStep === 'completion' ? 'yearBookkeeping' : state.viewingStep;
@@ -19,7 +20,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
     && state.completedSteps.includes(step) && nextStep !== undefined;
   return (
     <section className="step-shell card" aria-labelledby="step-heading">
-      {step !== 'proceeds' && step !== 'contractSchedule' && step !== 'effectiveInterest' && step !== 'amortizedCost' && step !== 'classification' && step !== 'yearBookkeeping' && <div className="step-heading">
+      {step !== 'proceeds' && step !== 'contractSchedule' && step !== 'effectiveInterest' && step !== 'amortizedCost' && step !== 'classification' && step !== 'yearBookkeeping' && step !== 'finalOverview' && <div className="step-heading">
         <div className="step-number-large" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
         <div>
           <p className="eyebrow">Trin {copy.number} af {STUDENT_STEPS.length}</p>
@@ -35,6 +36,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
         : step === 'amortizedCost' ? <AmortizationStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'yearBookkeeping' ? <BookkeepingStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'classification' ? <ClassificationStep state={state} onAction={onAction} readOnly={readOnly} />
+        : step === 'finalOverview' ? <FinalOverviewStep state={state} onAction={onAction} />
         : <div className="work-area table-scroll" role="group" aria-label={`Arbejdsområde for ${copy.title}`}>
           <div className="work-area-symbol" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
           <div>
