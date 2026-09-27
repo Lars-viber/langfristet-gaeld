@@ -53,7 +53,7 @@ export function createStudentState(generatedCase: GeneratedLevel1Case): StudentS
     effectiveInterest: { rows: {}, approvedTerms: [], remainingCalculated: false, rateCalculated: false },
     amortization: { terms: amortizationTerms, remainingCalculated: false },
     bookkeeping,
-    classification: { fields: {}, upcomingRepayments, reconciled: false, reclassification: block(), reclassificationAnswer: null, answerErrorCode: null },
+    classification: { fields: {}, shortTermAnswer: null, upcomingRepayments, reconciled: false, reclassification: block(), reclassificationAnswer: null, answerErrorCode: null },
     completion: { balances: {}, checks: { debtReconciles: false, financialExpenseReconciles: false, accountsReconcile: false } },
   };
 }
@@ -340,57 +340,57 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       return next;
     }
     case 'editClassificationField': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== ({ carryingAmount: 'carrying', shortTerm: 'shortTerm', longTerm: 'longTerm' } as const)[action.field] || state.classification.fields[action.field]?.approved) return state;
+      if (!allowed(state, 'classification') || action.field === 'carryingAmount' ||
+        classificationStage(state) !== action.field ||
+        (action.field === 'shortTerm' && state.caseResult.classification.shortTerm.isZero()) ||
+        state.classification.fields[action.field]?.approved) return state;
       const next = copy(state); editField(next.classification.fields[action.field] ??= field(), action.raw); return next;
     }
     case 'checkClassificationField': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== ({ carryingAmount: 'carrying', shortTerm: 'shortTerm', longTerm: 'longTerm' } as const)[action.field]) return state;
+      if (!allowed(state, 'classification') || action.field === 'carryingAmount' ||
+        classificationStage(state) !== action.field ||
+        (action.field === 'shortTerm' && state.caseResult.classification.shortTerm.isZero())) return state;
       const next = copy(state); const target = next.classification.fields[action.field] ??= field();
       const expected = calculatedResult(state).classification[action.field];
-      storeCheck(target, action.field === 'carryingAmount'
-        ? validateAmount(target.raw, { expected, requirePositive: true })
-        : validateManualCalculation(target.raw, { expected, requirePositive: true }));
+      storeCheck(target, validateManualCalculation(target.raw, { expected, requirePositive: true }));
+      if (action.field === 'longTerm' && target.approved && next.classification.fields.shortTerm?.approved &&
+        calculatedResult(state).classification.shortTerm.plus(expected).eq(calculatedResult(state).classification.carryingAmount)) completeStep(next);
+      return next;
+    }
+    case 'setShortTermAnswer': {
+      if (!allowed(state, 'classification') || classificationStage(state) !== 'shortTerm' ||
+        !state.caseResult.classification.shortTerm.isZero()) return state;
+      const next = copy(state); next.classification.shortTermAnswer = action.answer;
+      next.classification.answerErrorCode = null; return next;
+    }
+    case 'checkShortTermAnswer': {
+      if (!allowed(state, 'classification') || classificationStage(state) !== 'shortTerm' ||
+        !state.caseResult.classification.shortTerm.isZero()) return state;
+      const next = copy(state);
+      if (next.classification.shortTermAnswer === 'no') next.classification.fields.shortTerm = { raw: '', approved: true, errorCode: null };
+      else next.classification.answerErrorCode = 'WRONG_RESULT';
       return next;
     }
     case 'editUpcomingRepayment': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== 'upcoming' || !state.classification.upcomingRepayments[action.term] || state.classification.upcomingRepayments[action.term].approved) return state;
-      const next = copy(state); editField(next.classification.upcomingRepayments[action.term]!, action.raw); return next;
+      return state;
     }
     case 'checkUpcomingRepayment': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== 'upcoming' || state.classification.upcomingRepayments[action.term].approved) return state;
-      const expected = calculatedResult(state).contract.rows.find((row) => row.term === action.term)?.principalRepayment;
-      if (!expected) return state;
-      const next = copy(state); const target = next.classification.upcomingRepayments[action.term]!;
-      storeCheck(target, validateAmount(target.raw, { expected, requirePositive: true })); return next;
+      return state;
     }
     case 'checkClassification': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== 'reconcile') return state;
-      const next = copy(state); next.classification.reconciled = true; return next;
+      return state;
     }
     case 'setReclassificationBlock': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== 'reclassification' || state.classification.reclassification.approved) return state;
-      const next = copy(state); const target = next.classification.reclassification;
-      target.lines = action.lines.map((line) => ({ ...line })); target.errors = []; target.accountStatuses = []; return next;
+      return state;
     }
     case 'checkReclassification': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== 'reclassification') return state;
-      const expected = calculatedResult(state).postingEvents.find((event) => event.kind === 'reclassification');
-      if (!expected) return state;
-      const next = copy(state); const target = next.classification.reclassification;
-      storeBlockCheck(target, validatePostingBlock(target.lines, expected.movements));
-      if (target.approved) completeStep(next);
-      return next;
+      return state;
     }
     case 'setReclassificationAnswer': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== 'noReclassification') return state;
-      const next = copy(state); next.classification.reclassificationAnswer = action.answer; next.classification.answerErrorCode = null; return next;
+      return state;
     }
     case 'checkReclassificationAnswer': {
-      if (!allowed(state, 'classification') || classificationStage(state) !== 'noReclassification') return state;
-      const next = copy(state);
-      if (next.classification.reclassificationAnswer === 'no') completeStep(next);
-      else next.classification.answerErrorCode = 'WRONG_RESULT';
-      return next;
+      return state;
     }
     case 'editFinalBalance': {
       if (!allowed(state, 'completion') || !state.completion.balances[action.account] || state.completion.balances[action.account]?.approved) return state;

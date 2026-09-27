@@ -79,6 +79,7 @@ export interface StudentState {
   bookkeeping: Record<number, { payment: PostingBlockState; amortization: PostingBlockState }>;
   classification: {
     fields: Partial<Record<ClassificationField, FieldState>>;
+    shortTermAnswer: 'yes' | 'no' | null;
     upcomingRepayments: Record<number, FieldState>;
     reconciled: boolean;
     reclassification: PostingBlockState;
@@ -113,6 +114,8 @@ export type StudentAction =
   | { type: 'checkBookkeepingBlock'; term: number; block: 'payment' | 'amortization' }
   | { type: 'editClassificationField'; field: ClassificationField; raw: string }
   | { type: 'checkClassificationField'; field: ClassificationField }
+  | { type: 'setShortTermAnswer'; answer: 'yes' | 'no' }
+  | { type: 'checkShortTermAnswer' }
   | { type: 'editUpcomingRepayment'; term: number; raw: string }
   | { type: 'checkUpcomingRepayment'; term: number }
   | { type: 'checkClassification' }

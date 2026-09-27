@@ -64,15 +64,12 @@ export function canCalculateAnnuityPayment(state: StudentState): boolean {
     && prerequisitesApproved(state) && !state.schedule.annuityPaymentCalculated
     && state.caseResult.contract.standardPayment !== null;
 }
-export function classificationStage(state: StudentState): 'carrying' | 'upcoming' | 'shortTerm' | 'longTerm' | 'reconcile' | 'reclassification' | 'noReclassification' | 'done' {
+export function classificationStage(state: StudentState): 'shortTerm' | 'longTerm' | 'done' {
   const c = state.classification;
-  if (!c.fields.carryingAmount?.approved) return 'carrying';
-  if (Object.values(c.upcomingRepayments).some((field) => !field.approved)) return 'upcoming';
+  if (state.completedSteps.includes('classification')) return 'done';
   if (!c.fields.shortTerm?.approved) return 'shortTerm';
   if (!c.fields.longTerm?.approved) return 'longTerm';
-  if (!c.reconciled) return 'reconcile';
-  if (state.completedSteps.includes('classification')) return 'done';
-  return state.caseResult.classification.reclassificationRequired ? 'reclassification' : 'noReclassification';
+  return 'done';
 }
 export function deriveStudentView(state: StudentState) {
   const activeAmortizationTerm = manualTerms(state.generatedCase.loanType, state.caseResult.contract.rows.length)

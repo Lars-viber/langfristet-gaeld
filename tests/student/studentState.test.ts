@@ -120,24 +120,15 @@ function approveBookkeeping(state: StudentState): StudentState {
 }
 function approveClassification(state: StudentState): StudentState {
   const model = calculateLoan(state.generatedCase.caseInput);
-  state = take(state, { type: 'editClassificationField', field: 'carryingAmount', raw: dk(model.classification.carryingAmount.toFixed(2)) });
-  state = take(state, { type: 'checkClassificationField', field: 'carryingAmount' });
-  for (const row of model.contract.rows.filter((entry) => entry.date > '2026-12-31' && entry.date <= '2027-12-31')) {
-    state = take(state, { type: 'editUpcomingRepayment', term: row.term, raw: dk(row.principalRepayment.toFixed(2)) });
-    state = take(state, { type: 'checkUpcomingRepayment', term: row.term });
+  if (model.classification.shortTerm.isZero()) {
+    state = take(state, { type: 'setShortTermAnswer', answer: 'no' });
+    state = take(state, { type: 'checkShortTermAnswer' });
+  } else {
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(model.classification.shortTerm) });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
   }
-  for (const field of ['shortTerm', 'longTerm'] as const) {
-    state = take(state, { type: 'editClassificationField', field, raw: formula(model.classification[field]) });
-    state = take(state, { type: 'checkClassificationField', field });
-  }
-  state = take(state, { type: 'checkClassification' });
-  if (model.classification.reclassificationRequired) {
-    const event = model.postingEvents.find((entry) => entry.kind === 'reclassification')!;
-    state = take(state, { type: 'setReclassificationBlock', lines: lines(event.movements) });
-    return take(state, { type: 'checkReclassification' });
-  }
-  state = take(state, { type: 'setReclassificationAnswer', answer: 'no' });
-  return take(state, { type: 'checkReclassificationAnswer' });
+  state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(model.classification.longTerm) });
+  return take(state, { type: 'checkClassificationField', field: 'longTerm' });
 }
 function approveBalances(state: StudentState): StudentState {
   const model = calculateLoan(state.generatedCase.caseInput);
@@ -391,28 +382,24 @@ describe('L5 student progression', () => {
     expect(state.bookkeeping[2]?.amortization.approved).toBe(true);
     expect(state.currentStep).toBe('yearBookkeeping');
   });
-  it('requires a reclassification block for positive short term debt', () => {
+  it('completes positive short-term classification without bookkeeping', () => {
     let state = atClassification(r1);
     const model = calculateLoan(r1.input);
-    state = take(state, { type: 'editClassificationField', field: 'carryingAmount', raw: dk(model.classification.carryingAmount.toFixed(2)) });
-    state = take(state, { type: 'checkClassificationField', field: 'carryingAmount' });
-    for (const row of model.contract.rows.filter((entry) => entry.date > '2026-12-31' && entry.date <= '2027-12-31')) {
-      state = take(state, { type: 'editUpcomingRepayment', term: row.term, raw: dk(row.principalRepayment.toFixed(2)) });
-      state = take(state, { type: 'checkUpcomingRepayment', term: row.term });
-    }
-    for (const field of ['shortTerm', 'longTerm'] as const) {
-      state = take(state, { type: 'editClassificationField', field, raw: formula(model.classification[field]) });
-      state = take(state, { type: 'checkClassificationField', field });
-    }
-    state = take(state, { type: 'checkClassification' });
-    expect(classificationStage(state)).toBe('reclassification');
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(model.classification.shortTerm) });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
+    expect(classificationStage(state)).toBe('longTerm');
+    state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(model.classification.longTerm) });
+    state = take(state, { type: 'checkClassificationField', field: 'longTerm' });
+    expect(classificationStage(state)).toBe('done');
     expect(state.currentStep).toBe('classification');
-    expect(take(state, { type: 'setReclassificationAnswer', answer: 'no' })).toBe(state);
+    expect(state.completedSteps).toContain('classification');
+    expect(take(state, { type: 'setReclassificationBlock', lines: [] })).toBe(state);
   });
   it('requires No and creates no zero posting when short term is zero', () => {
     const state = throughClassification(r6);
     expect(state.classification.reclassification.lines).toEqual([]);
-    expect(state.classification.reclassificationAnswer).toBe('no');
+    expect(state.classification.shortTermAnswer).toBe('no');
+    expect(state.classification.fields.shortTerm).toMatchObject({ raw: '', approved: true });
     expect(state.currentStep).toBe('classification');
   });
   it('creates final-balance data when classification explicitly continues to bookkeeping', () => {

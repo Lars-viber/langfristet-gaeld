@@ -5,10 +5,9 @@ import { AppShell } from '../../src/app/AppShell';
 import { ClassificationStep } from '../../src/components/ClassificationStep';
 import { CompletionStep } from '../../src/components/CompletionStep';
 import { calculateLoan } from '../../src/domain';
-import { createMemorySessionStorage, loadStudentSession, saveStudentSession } from '../../src/persistence';
+import { createMemorySessionStorage, deserializeStudentSession, loadStudentSession, saveStudentSession, serializeStudentSession } from '../../src/persistence';
 import { STUDENT_STEPS, applyStudentAction, classificationStage, createStudentState } from '../../src/student';
 import type { StudentAction, StudentState } from '../../src/student';
-import type { StudentPostingLine } from '../../src/validation';
 import { r1 } from '../fixtures/r1';
 import { r6 } from '../fixtures/r6';
 import type { GoldenFixture } from '../fixtures/types';
@@ -17,6 +16,7 @@ const take = (state: StudentState, action: StudentAction) => {
   return applyStudentAction(state, action);
 };
 const dk = (value: string) => value.replace('.', ',');
+const dateLabelForTest = (value: string) => value.split('-').reverse().join('.');
 const formula = (value: { toFixed(scale: number): string }) => `=${dk(value.toFixed(2))}+0`;
 const renderClassification = (state: StudentState) => renderToStaticMarkup(createElement(ClassificationStep, { state, onAction: () => {}, readOnly: state.currentStep !== 'classification' || state.sessionStatus === 'completed' }));
 const renderCompletion = (state: StudentState) => renderToStaticMarkup(createElement(CompletionStep, { state, onAction: () => {}, readOnly: state.sessionStatus === 'completed' }));
@@ -26,40 +26,21 @@ function atClassification(fixture: GoldenFixture): StudentState {
   return { ...state, currentStep: 'classification', viewingStep: 'classification', completedSteps: [...STUDENT_STEPS.slice(0, 4)] };
 }
 
-function throughUpcoming(state: StudentState): StudentState {
-  const model = calculateLoan(state.generatedCase.caseInput);
-  state = take(state, { type: 'editClassificationField', field: 'carryingAmount', raw: dk(model.classification.carryingAmount.toFixed(2)) });
-  state = take(state, { type: 'checkClassificationField', field: 'carryingAmount' });
-  for (const row of model.contract.rows.filter((entry) => entry.date > '2026-12-31' && entry.date <= '2027-12-31')) {
-    state = take(state, { type: 'editUpcomingRepayment', term: row.term, raw: dk(row.principalRepayment.toFixed(2)) });
-    state = take(state, { type: 'checkUpcomingRepayment', term: row.term });
-  }
-  return state;
-}
-
 function throughDistribution(state: StudentState): StudentState {
-  state = throughUpcoming(state);
   const expected = calculateLoan(state.generatedCase.caseInput).classification;
-  for (const name of ['shortTerm', 'longTerm'] as const) {
-    state = take(state, { type: 'editClassificationField', field: name, raw: formula(expected[name]) });
-    state = take(state, { type: 'checkClassificationField', field: name });
+  if (expected.shortTerm.isZero()) {
+    state = take(state, { type: 'setShortTermAnswer', answer: 'no' });
+    state = take(state, { type: 'checkShortTermAnswer' });
+  } else {
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(expected.shortTerm) });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
   }
-  return take(state, { type: 'checkClassification' });
+  state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(expected.longTerm) });
+  return take(state, { type: 'checkClassificationField', field: 'longTerm' });
 }
 
 function throughClassification(fixture: GoldenFixture): StudentState {
-  let state = throughDistribution(atClassification(fixture));
-  const model = calculateLoan(fixture.input);
-  if (model.classification.reclassificationRequired) {
-    const event = model.postingEvents.find((entry) => entry.kind === 'reclassification')!;
-    const lines: StudentPostingLine[] = event.movements.map((entry) => ({
-      account: entry.account, side: entry.amount.isNegative() ? 'K' : 'D', amount: dk(entry.amount.abs().toFixed(2)),
-    }));
-    state = take(state, { type: 'setReclassificationBlock', lines });
-    return take(state, { type: 'checkReclassification' });
-  }
-  state = take(state, { type: 'setReclassificationAnswer', answer: 'no' });
-  return take(state, { type: 'checkReclassificationAnswer' });
+  return throughDistribution(atClassification(fixture));
 }
 
 function atCompletion(fixture: GoldenFixture): StudentState {
@@ -78,56 +59,87 @@ function approveBalances(state: StudentState): StudentState {
 }
 
 describe('L8D classification and completion', () => {
-  it('starts with only the carrying amount and does not expose upcoming answers', () => {
+  it('shows the full approved Balance and the 2026 carrying amount without a duplicate 2027 table', () => {
     const state = atClassification(r1);
     const html = renderClassification(state);
-    expect(html).toContain('Samlet amortiseret kostpris');
-    expect(html).not.toContain('Kortfristet del = summen');
+    expect(html).toContain('Amortiseret kostpris pr. 31.12.2026');
+    expect(html).toContain(new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2 }).format(Number(state.caseResult.classification.carryingAmount.toFixed(2))));
+    expect(html).toMatch(/Termin<\/th><th scope="col">Dato<\/th><th scope="col">Kostpris primo<\/th><th scope="col">Afdrag<\/th><th scope="col">Amortisering<\/th><th scope="col">Kostpris ultimo/);
+    for (const row of state.caseResult.carryingSchedule) expect(html).toContain(dateLabelForTest(row.date));
+    expect(html).not.toContain('Afdrag med forfald i 2027');
     expect(html).not.toContain(dk(state.caseResult.classification.shortTerm.toFixed(2)));
     expect(state.caseResult.accountBalances).toBeNull();
   });
 
-  it('asks for contractual principal repayments dated after 2026 through 2027', () => {
-    const state = throughUpcoming(atClassification(r1));
-    const html = renderClassification(state);
-    const matching = state.caseResult.contract.rows.filter((row) => row.date > '2026-12-31' && row.date <= '2027-12-31');
-    expect(Object.keys(state.classification.upcomingRepayments)).toHaveLength(matching.length);
-    for (const row of matching) expect(html).toContain(`Termin ${row.term}`);
-    expect(html).toContain('kontraktuelle');
-    expect(classificationStage(state)).toBe('shortTerm');
+  it('uses only principal repayments after 2026 and through 2027', () => {
+    const state = atClassification(r1);
+    const rows = state.caseResult.contract.rows.filter((row) => row.date > '2026-12-31' && row.date <= '2027-12-31');
+    const principal = rows.reduce((sum, row) => sum + Number(row.principalRepayment.toFixed(2)), 0);
+    const payments = rows.reduce((sum, row) => sum + Number(row.payment.toFixed(2)), 0);
+    const interest = rows.reduce((sum, row) => sum + Number(row.nominalInterest.toFixed(2)), 0);
+    const amortization = state.caseResult.carryingSchedule.filter((row) => row.date > '2026-12-31' && row.date <= '2027-12-31')
+      .reduce((sum, row) => sum + Number(row.amortization.toFixed(2)), 0);
+    expect(principal.toFixed(2)).toBe(state.caseResult.classification.shortTerm.toFixed(2));
+    expect(principal).not.toBe(payments);
+    expect(principal).not.toBe(interest);
+    expect(principal).not.toBe(amortization);
+    expect(rows.every((row) => row.date > '2026-12-31' && row.date <= '2027-12-31')).toBe(true);
   });
 
-  it('requires a real equals calculation for the short and long portions', () => {
-    let state = throughUpcoming(atClassification(r1));
+  it('requires positive manual formulas in sequence and completes without navigating', () => {
+    let state = atClassification(r1);
     const expected = calculateLoan(r1.input).classification.shortTerm;
+    expect(take(state, { type: 'editClassificationField', field: 'longTerm', raw: '=1+1' })).toBe(state);
     state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: dk(expected.toFixed(2)) });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
     expect(state.classification.fields.shortTerm?.errorCode).toBe('MISSING_EQUALS');
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: `=-${dk(expected.toFixed(2))}+0` });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
+    expect(renderClassification(state)).toContain('Fradraget vises allerede med');
     state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(expected) });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
     expect(classificationStage(state)).toBe('longTerm');
-    expect(state.caseResult.accountBalances).toBeNull();
-  });
-
-  it('requires the posting block when the short portion is positive', () => {
-    let state = throughDistribution(atClassification(r1));
-    expect(classificationStage(state)).toBe('reclassification');
-    expect(renderClassification(state)).toContain('Kontrollér postering');
-    expect(take(state, { type: 'setReclassificationAnswer', answer: 'no' })).toBe(state);
-    state = take(state, { type: 'checkReclassification' });
+    const long = state.caseResult.classification.longTerm;
+    state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: dk(long.toFixed(2)) });
+    state = take(state, { type: 'checkClassificationField', field: 'longTerm' });
+    expect(state.classification.fields.longTerm?.errorCode).toBe('MISSING_EQUALS');
+    state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: `=${dk(state.caseResult.classification.carryingAmount.toFixed(2))}-${dk(expected.toFixed(2))}` });
+    state = take(state, { type: 'checkClassificationField', field: 'longTerm' });
+    expect(state.completedSteps).toContain('classification');
     expect(state.currentStep).toBe('classification');
+    expect(expected.plus(long).eq(state.caseResult.classification.carryingAmount)).toBe(true);
+    expect(renderClassification(state)).toContain('Fortsæt til Bogføring');
+    expect(take(state, { type: 'setReclassificationBlock', lines: [] })).toBe(state);
     expect(state.caseResult.accountBalances).toBeNull();
   });
 
-  it('accepts Nej for a zero short portion without creating a zero posting', () => {
-    let state = throughDistribution(atClassification(r6));
-    expect(classificationStage(state)).toBe('noReclassification');
-    state = take(state, { type: 'setReclassificationAnswer', answer: 'yes' });
-    state = take(state, { type: 'checkReclassificationAnswer' });
+  it('continues explicitly to bookkeeping and returns from read-only history', () => {
+    const completed = throughClassification(r1);
+    const moved = take(completed, { type: 'continueToNextStep' });
+    expect(moved.currentStep).toBe('yearBookkeeping');
+    const historical = take(moved, { type: 'viewHistoricalStep', step: 'classification' });
+    const html = renderClassification(historical);
+    expect(html).toContain('Tilbage til aktuelt trin');
+    expect(html).not.toContain('Fortsæt til Bogføring');
+    expect(html).toContain('readOnly');
+    expect(take(historical, { type: 'editClassificationField', field: 'longTerm', raw: '=1+1' })).toBe(historical);
+    expect(take(historical, { type: 'returnToCurrentStep' }).viewingStep).toBe('yearBookkeeping');
+  });
+
+  it('accepts Nej for zero short term without an artificial =0 formula or posting', () => {
+    let state = atClassification(r6);
+    expect(renderClassification(state)).toContain('Forfalder der afdrag på hovedstolen');
+    state = take(state, { type: 'setShortTermAnswer', answer: 'yes' });
+    state = take(state, { type: 'checkShortTermAnswer' });
     expect(state.currentStep).toBe('classification');
     expect(renderClassification(state)).toContain('Beregningen stemmer ikke endnu.');
-    state = take(state, { type: 'setReclassificationAnswer', answer: 'no' });
-    state = take(state, { type: 'checkReclassificationAnswer' });
+    state = take(state, { type: 'setShortTermAnswer', answer: 'no' });
+    state = take(state, { type: 'checkShortTermAnswer' });
+    expect(state.classification.fields.shortTerm).toMatchObject({ raw: '', approved: true });
+    expect(classificationStage(state)).toBe('longTerm');
+    state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(state.caseResult.classification.carryingAmount) });
+    state = take(state, { type: 'checkClassificationField', field: 'longTerm' });
+    expect(state.completedSteps).toContain('classification');
     expect(state.currentStep).toBe('classification');
     expect(state.classification.reclassification.lines).toEqual([]);
     expect(state.caseResult.postingEvents.some((event) => event.kind === 'reclassification')).toBe(false);
@@ -199,8 +211,21 @@ describe('L8D classification and completion', () => {
     expect(restored.status).toBe('restored');
     if (restored.status !== 'restored') throw new Error('Restore failed');
     expect(restored.state.classification.fields).toEqual(state.classification.fields);
+    expect(restored.state.classification.shortTermAnswer).toBe(state.classification.shortTermAnswer);
     expect(restored.state.classification.reclassification.lines).toEqual(state.classification.reclassification.lines);
     expect(restored.state.completion).toEqual(state.completion);
     expect(restored.state.sessionStatus).toBe('completed');
+  });
+
+  it('restores an older v2 session without Step 5 work using safe defaults', () => {
+    const snapshot = serializeStudentSession(atClassification(r1)) as Record<string, unknown>;
+    const studentState = snapshot.studentState as Record<string, unknown>;
+    delete studentState.classification;
+    const restored = deserializeStudentSession(snapshot);
+    expect(restored.status).toBe('restored');
+    if (restored.status !== 'restored') throw new Error('Restore failed');
+    expect(restored.state.classification.fields).toEqual({});
+    expect(restored.state.classification.shortTermAnswer).toBeNull();
+    expect(classificationStage(restored.state)).toBe('shortTerm');
   });
 });

@@ -151,6 +151,7 @@ const studentState = object({
   bookkeeping: terms(object({ payment: block, amortization: block })),
   classification: object({
     fields: partial(['carryingAmount', 'shortTerm', 'longTerm'], field),
+    shortTermAnswer: nullable(literal('yes', 'no')),
     upcomingRepayments: terms(field), reconciled: bool, reclassification: block,
     reclassificationAnswer: nullable(literal('yes', 'no')), answerErrorCode: errorCode,
   }),
@@ -173,11 +174,16 @@ export function deserializeStudentSession(input: unknown): RestoreResult {
     const interest = isObject(rawInterest) ? rawInterest : rawInterest === undefined ? {} : rawInterest;
     const rawAmortization = isObject(rawState) ? rawState.amortization : undefined;
     const amortization = isObject(rawAmortization) ? rawAmortization : rawAmortization === undefined ? {} : rawAmortization;
+    const rawClassification = isObject(rawState) ? rawState.classification : undefined;
+    const classification = isObject(rawClassification) ? rawClassification : rawClassification === undefined ? {} : rawClassification;
     const emptyTerm = () => ({ income: {}, balance: {}, incomeApproved: false, balanceApproved: false, approved: false });
-    const normalized = isObject(rawState) && isObject(interest) && isObject(amortization) ? {
+    const normalized = isObject(rawState) && isObject(interest) && isObject(amortization) && isObject(classification) ? {
       ...input, studentState: { ...rawState, effectiveInterest: {
         rows: {}, approvedTerms: [], remainingCalculated: false, rateCalculated: false, ...interest,
-      }, amortization: { terms: { 1: emptyTerm(), 2: emptyTerm() }, remainingCalculated: false, ...amortization } },
+      }, amortization: { terms: { 1: emptyTerm(), 2: emptyTerm() }, remainingCalculated: false, ...amortization },
+      classification: { fields: {}, shortTermAnswer: null, upcomingRepayments: {}, reconciled: false,
+        reclassification: { lines: [], approved: false, errors: [], accountStatuses: [] },
+        reclassificationAnswer: null, answerErrorCode: null, ...classification } },
     } : input;
     const document = object({
       schemaVersion: literal(PERSISTENCE_SCHEMA_VERSION), rulesetVersion: literal(RULESET_VERSION),
