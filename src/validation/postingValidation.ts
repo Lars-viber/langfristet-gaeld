@@ -2,6 +2,9 @@ import type Decimal from 'decimal.js';
 import { sumMoney, ZERO } from '../domain/decimal';
 import type { AccountNumber, NetMovement } from '../domain/types';
 import { parseAmount } from './amountValidation';
+import { evaluateDanishFormula } from './formula';
+import { failure } from './feedback';
+import type { ValidationResult } from './types';
 import type { StudentPostingLine, ValidationErrorCode } from './types';
 
 export interface AccountPostingStatus {
@@ -19,6 +22,15 @@ export interface PostingBlockResult {
   studentLines: readonly StudentPostingLine[];
 }
 
+/** A posting amount is always positive; a formula is optional, unlike a calculation field. */
+export function parsePostingAmount(raw: string): ValidationResult {
+  const parsed = raw.trim().startsWith('=') ? evaluateDanishFormula(raw) : parseAmount(raw, false);
+  if (!parsed.correct) return failure(parsed.errorCode ?? 'INVALID_AMOUNT');
+  if (!parsed.value || !parsed.value.isFinite() || parsed.value.isZero()) return failure('INVALID_AMOUNT');
+  if (parsed.value.isNegative()) return failure('NEGATIVE_AMOUNT_NOT_ALLOWED');
+  return { correct: true, value: parsed.value.toDecimalPlaces(2), errorCode: null, feedback: null };
+}
+
 /** Expected movement is signed: debit positive, credit negative. */
 export function validatePostingBlock(
   studentLines: readonly StudentPostingLine[],
@@ -34,7 +46,7 @@ export function validatePostingBlock(
   const signed: Decimal[] = [];
   for (const line of studentLines) {
     if (!expected.has(line.account)) errors.add('IRRELEVANT_ACCOUNT');
-    const parsed = parseAmount(line.amount, false);
+    const parsed = parsePostingAmount(line.amount);
     if (!parsed.correct || !parsed.value) { errors.add(parsed.errorCode ?? 'INVALID_AMOUNT'); continue; }
     if (line.side !== 'D' && line.side !== 'K') { errors.add('INVALID_SIGN'); continue; }
     const value = line.side === 'D' ? parsed.value : parsed.value.neg();

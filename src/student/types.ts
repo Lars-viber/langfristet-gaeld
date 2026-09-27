@@ -5,10 +5,10 @@ import type { DebitCreditSide, StudentPostingLine, ValidationErrorCode } from '.
 export const STUDENT_STATE_VERSION = 2;
 export const STUDENT_STEPS = [
   'proceeds', 'contractSchedule', 'effectiveInterest', 'amortizedCost',
-  'classification', 'yearBookkeeping', 'completion', 'finalOverview',
+  'classification', 'yearBookkeeping', 'finalOverview',
 ] as const;
 /** initialRecognition is retained only as internal future bookkeeping state, never as a visible step. */
-export type StudentStep = typeof STUDENT_STEPS[number] | 'initialRecognition';
+export type StudentStep = typeof STUDENT_STEPS[number] | 'initialRecognition' | 'completion';
 export type StepStatus = 'current' | 'completed' | 'locked';
 export type RowStatus = 'locked' | 'active' | 'approved' | 'appCalculated';
 export type ScheduleField = 'openingPrincipal' | 'payment' | 'nominalInterest' | 'principalRepayment' | 'closingPrincipal';
@@ -51,7 +51,7 @@ export type StudentCaseResult = Omit<LoanResult, 'accountBalances' | 'finalCheck
 export interface StudentState {
   schemaVersion: typeof STUDENT_STATE_VERSION;
   generatedCase: GeneratedLevel1Case;
-  /** Domain data derived from the case snapshot; balances are added only at step 8. */
+  /** Domain data derived from the case snapshot; balances become available in Step 6. */
   caseResult: StudentCaseResult;
   currentStep: StudentStep;
   viewingStep: StudentStep;
@@ -112,6 +112,8 @@ export type StudentAction =
   | { type: 'calculateRemainingAmortization' }
   | { type: 'setBookkeepingBlock'; term: number; block: 'payment' | 'amortization'; lines: StudentPostingLine[] }
   | { type: 'checkBookkeepingBlock'; term: number; block: 'payment' | 'amortization' }
+  | { type: 'setPostingBlockLines'; number: number; lines: StudentPostingLine[] }
+  | { type: 'checkPostingBlock'; number: number }
   | { type: 'editClassificationField'; field: ClassificationField; raw: string }
   | { type: 'checkClassificationField'; field: ClassificationField }
   | { type: 'setShortTermAnswer'; answer: 'yes' | 'no' }

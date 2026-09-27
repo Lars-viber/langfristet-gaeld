@@ -355,34 +355,6 @@ describe('L5 student progression', () => {
     expect(amortizationSubrowStatus(state, 3, 'balance')).toBe('appCalculated');
     expect(amortizationSubrowStatus(state, 8, 'balance')).toBe('approved');
   });
-  it('requires payment approval before amortization posting opens', () => {
-    const state = throughAmortization(r1);
-    expect(take(state, { type: 'setBookkeepingBlock', term: 1, block: 'amortization', lines: [] })).toBe(state);
-    expect(deriveStudentView(state).activeBookkeepingBlock).toBe('payment');
-  });
-  it('leaves every line editable after a wrong bookkeeping block', () => {
-    let state = take(throughClassification(r1), { type: 'continueToNextStep' });
-    state = take(state, { type: 'setBookkeepingBlock', term: 1, block: 'payment', lines: [{ account: '4410', side: 'D', amount: '1' }] });
-    state = take(state, { type: 'checkBookkeepingBlock', term: 1, block: 'payment' });
-    expect(state.bookkeeping[1]?.payment.approved).toBe(false);
-    expect(state.bookkeeping[1]?.payment.errors).toContain('WRONG_NET_MOVEMENT');
-    const corrected = take(state, { type: 'setBookkeepingBlock', term: 1, block: 'payment', lines: lines(calculateLoan(r1.input).postingEvents.find((event) => event.kind === 'payment')!.movements) });
-    expect(corrected.bookkeeping[1]?.payment.lines).toHaveLength(3);
-  });
-  it('locks the entire approved payment block', () => {
-    let state = take(throughClassification(r1), { type: 'continueToNextStep' });
-    const event = calculateLoan(r1.input).postingEvents.find((entry) => entry.kind === 'payment')!;
-    state = take(state, { type: 'setBookkeepingBlock', term: 1, block: 'payment', lines: lines(event.movements) });
-    state = take(state, { type: 'checkBookkeepingBlock', term: 1, block: 'payment' });
-    expect(state.bookkeeping[1]?.payment.approved).toBe(true);
-    expect(take(state, { type: 'setBookkeepingBlock', term: 1, block: 'payment', lines: [] })).toBe(state);
-  });
-  it('advances multiple 2026 terms in order', () => {
-    const state = throughBookkeeping(r3);
-    expect(state.bookkeeping[1]?.amortization.approved).toBe(true);
-    expect(state.bookkeeping[2]?.amortization.approved).toBe(true);
-    expect(state.currentStep).toBe('yearBookkeeping');
-  });
   it('completes positive short-term classification without bookkeeping', () => {
     let state = atClassification(r1);
     const model = calculateLoan(r1.input);
@@ -410,47 +382,6 @@ describe('L5 student progression', () => {
     expect(classified.caseResult.accountBalances).toBeNull();
     const bookkeeping = take(classified, { type: 'continueToNextStep' });
     expect(bookkeeping.caseResult.accountBalances).not.toBeNull();
-  });
-  it('approves final balance accounts individually', () => {
-    let state = throughCompletion(r1);
-    const first = calculateLoan(r1.input).accountBalances[0]!;
-    if (first.status !== 'balance') throw new Error('Fixture expected balance');
-    state = take(state, { type: 'editFinalBalance', account: first.account, formula: formula(first.amount), side: first.side });
-    state = take(state, { type: 'checkFinalBalance', account: first.account });
-    expect(state.completion.balances[first.account]?.approved).toBe(true);
-    expect(take(state, { type: 'editFinalBalance', account: first.account, formula: '=1+1' })).toBe(state);
-    expect(Object.values(state.completion.balances).some((entry) => !entry.approved)).toBe(true);
-  });
-  it('treats noBalance as read only without an =0 input', () => {
-    const state = throughCompletion(r6);
-    expect(state.completion.balances['6760']).toBeUndefined();
-    expect(take(state, { type: 'editFinalBalance', account: '6760', formula: '=0+0' })).toBe(state);
-  });
-  it('can show 0, 1, 2, and 3 final checks without auto completion', () => {
-    let state = approveBalances(throughCompletion(r1));
-    expect(deriveStudentView(state).finalChecksPassed).toBe(0);
-    state = take(state, { type: 'runFinalChecks', check: 'debtReconciles' });
-    expect(deriveStudentView(state).finalChecksPassed).toBe(1);
-    state = take(state, { type: 'runFinalChecks', check: 'financialExpenseReconciles' });
-    expect(deriveStudentView(state).finalChecksPassed).toBe(2);
-    state = take(state, { type: 'runFinalChecks', check: 'accountsReconcile' });
-    expect(deriveStudentView(state).finalChecksPassed).toBe(3);
-    expect(state.sessionStatus).toBe('active');
-  });
-  it('completes only through explicit finishLevel1', () => {
-    let state = approveBalances(throughCompletion(r1));
-    state = take(state, { type: 'runFinalChecks' });
-    state = take(state, { type: 'finishLevel1' });
-    expect(state.sessionStatus).toBe('completed');
-    expect(state.completedSteps).toHaveLength(8);
-    expect(deriveCompletedSummary(state)?.proceeds).toBe('6590000.00');
-  });
-  it('makes all steps read only after completion', () => {
-    let state = approveBalances(throughCompletion(r1));
-    state = take(take(state, { type: 'runFinalChecks' }), { type: 'finishLevel1' });
-    expect(canViewStep(state, 'proceeds')).toBe(true);
-    expect(canEditStep(state, 'completion')).toBe(false);
-    expect(take(state, { type: 'editFinalBalance', account: '4410', formula: '=1+1' })).toBe(state);
   });
   it('resets to the exact same generated case without calling a generator', () => {
     const original = generated(r1, 123);

@@ -21,7 +21,7 @@ describe('L7 shell structure', () => {
     expect(html).toContain('Annuitetslån');
     expect(html).toContain('7.000.000,00 kr.');
     expect(html).toContain('8 % p.a.');
-    expect((html.match(/class="progress-step /g) ?? [])).toHaveLength(8);
+    expect((html.match(/class="progress-step /g) ?? [])).toHaveLength(7);
     expect(html).toContain('status-current');
     expect(html).toContain('status-locked');
     expect(html).not.toContain('6.590.000,00');

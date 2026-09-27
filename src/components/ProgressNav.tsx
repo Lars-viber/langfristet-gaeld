@@ -15,8 +15,8 @@ export function ProgressNav({ state, onAction }: ProgressNavProps) {
   }
 
   return (
-    <nav className="progress-wrap" aria-label="Opgavens otte trin">
-      <div className="progress-head"><p className="eyebrow">Dit forløb</p><span>{state.completedSteps.length} af 8 gennemført</span></div>
+    <nav className="progress-wrap" aria-label="Opgavens syv trin">
+      <div className="progress-head"><p className="eyebrow">Dit forløb</p><span>{STUDENT_STEPS.filter((step) => state.completedSteps.includes(step)).length} af {STUDENT_STEPS.length} gennemført</span></div>
       <ol className="progress-list">
         {STUDENT_STEPS.map((step) => {
           const item = view.steps.find((entry) => entry.step === step)!;

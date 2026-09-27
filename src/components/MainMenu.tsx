@@ -32,7 +32,7 @@ export function MainMenu({ mode, restorable, onStart, onContinue, onNewCase }: M
         </div>
         <div className="intro-aside" aria-label="Forløbets ramme">
           <span className="aside-index">01—08</span>
-          <strong>Ét lån. Otte trin.</strong>
+          <strong>Ét lån. Syv trin.</strong>
           <p>Vælg lånetype, arbejd dig gennem opgaven, og vend tilbage til de trin du har gennemført.</p>
           <div className="aside-decoration" aria-hidden="true"><span /><span /><span /><span /></div>
         </div>

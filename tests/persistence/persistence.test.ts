@@ -128,16 +128,27 @@ describe('L6 serialization', () => {
     expect(result.caseResult.proceeds.proceeds.toFixed(2)).toBe('6590000.00');
   });
 
-  it('restores a completed session as read-only', () => {
+  it('moves an older separate balance-step session safely back to unified Step 6', () => {
     const state: StudentState = { ...fresh(), currentStep: 'completion', viewingStep: 'proceeds',
       completedSteps: [...STUDENT_STEPS], sessionStatus: 'completed',
       completion: { balances: {}, checks: { debtReconciles: true, financialExpenseReconciles: true, accountsReconcile: true } },
     };
     const result = restored(state);
-    expect(result.sessionStatus).toBe('completed');
-    expect(result.completedSteps).toEqual(STUDENT_STEPS);
+    expect(result.sessionStatus).toBe('active');
+    expect(result.currentStep).toBe('yearBookkeeping');
+    expect(result.viewingStep).toBe('yearBookkeeping');
+    expect(result.completedSteps).toEqual(STUDENT_STEPS.slice(0, 5));
     expect(result.completion.checks).toEqual(state.completion.checks);
-    expect(canEditStep(result, 'completion')).toBe(false);
+    expect(canEditStep(result, 'yearBookkeeping')).toBe(true);
+  });
+
+  it('reopens a legacy completed bookkeeping step that has no integrated balances', () => {
+    const state: StudentState = { ...fresh(), currentStep: 'yearBookkeeping', viewingStep: 'yearBookkeeping',
+      completedSteps: [...STUDENT_STEPS.slice(0, 6)] };
+    const result = restored(state);
+    expect(result.currentStep).toBe('yearBookkeeping');
+    expect(result.completedSteps).toEqual(STUDENT_STEPS.slice(0, 5));
+    expect(result.initialRecognition.approved).toBe(false);
   });
 
   it('roundtrips reset state with the same generated case', () => {

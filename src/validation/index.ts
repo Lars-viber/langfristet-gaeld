@@ -5,7 +5,7 @@ export type { FormulaResult, FormulaErrorCode } from './formula';
 export { parseAmount, validateAmount } from './amountValidation';
 export { validateManualCalculation } from './manualCalculation';
 export { validateCashFlowRow } from './cashFlowValidation';
-export { validatePostingBlock } from './postingValidation';
+export { validatePostingBlock, parsePostingAmount } from './postingValidation';
 export { validateFinalBalance } from './balanceValidation';
 export { feedbackFor } from './feedback';
 export type { ValidationResult, ValidationErrorCode, StudentPostingLine, DebitCreditSide } from './types';

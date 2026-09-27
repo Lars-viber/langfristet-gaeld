@@ -56,7 +56,7 @@ const date: Reader = (value) => {
 const loanType = literal('annuity', 'serial', 'bullet');
 const account = literal('4410', '4450', '5820', '6320', '6330', '6760');
 const side = literal('D', 'K');
-const step = literal(...STUDENT_STEPS);
+const step = literal(...STUDENT_STEPS, 'completion', 'initialRecognition');
 const errorCode = nullable(literal(
   'MISSING_EQUALS', 'NO_ACTUAL_OPERATION', 'INVALID_FORMULA', 'UNKNOWN_REFERENCE',
   'DIVISION_BY_ZERO', 'NON_FINITE_RESULT', 'NEGATIVE_AMOUNT_NOT_ALLOWED',
@@ -203,6 +203,22 @@ export function deserializeStudentSession(input: unknown): RestoreResult {
       const schedule = stored.schedule as StudentState['schedule'];
       schedule.annuityPaymentCalculated = snapshot.loanType === 'annuity'
         && (schedule.approvedTerms.length > 0 || schedule.remainingCalculated);
+    }
+    // Older v2 sessions could enter a separate balance step. Keep their work, but return
+    // them to the unified Step 6 so origination and reclassification can be demonstrated.
+    const savedBalances = (stored.completion as StudentState['completion']).balances;
+    const expectedBalances = (stored.caseResult as StudentState['caseResult']).accountBalances;
+    const legacyCompletedBookkeeping = (stored.completedSteps as string[]).includes('yearBookkeeping')
+      && (!(stored.initialRecognition as StudentState['initialRecognition']).approved
+        || !(stored.classification as StudentState['classification']).reclassification.approved
+        || !expectedBalances || expectedBalances.some((entry) => entry.status === 'balance' && !savedBalances[entry.account]?.approved));
+    const oldBalanceStep = stored.currentStep === 'completion' || stored.viewingStep === 'completion';
+    if (oldBalanceStep || legacyCompletedBookkeeping) {
+      stored.currentStep = 'yearBookkeeping';
+      stored.viewingStep = 'yearBookkeeping';
+      stored.completedSteps = (stored.completedSteps as string[]).filter((entry) =>
+        entry !== 'completion' && entry !== 'yearBookkeeping' && entry !== 'finalOverview');
+      stored.sessionStatus = 'active';
     }
     return { status: 'restored', state: { ...stored, generatedCase: snapshot } as unknown as StudentState };
   } catch (error) {

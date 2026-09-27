@@ -3,7 +3,7 @@ import { D } from '../domain/decimal';
 import type { AccountNumber } from '../domain';
 import type { GeneratedLevel1Case } from '../generator';
 import {
-  FULL_PRECISION_RATE, validateAmount, validateCashFlowRow, validateFinalBalance,
+  FULL_PRECISION_RATE, feedbackFor, validateAmount, validateCashFlowRow, validateFinalBalance,
   validateManualCalculation, validatePostingBlock,
 } from '../validation';
 import type { StudentPostingLine, ValidationResult } from '../validation';
@@ -12,6 +12,7 @@ import {
   classificationRepaymentCount, classificationStage, manualTerms, prerequisitesApproved, scheduleRowStatus,
 } from './selectors';
 import { STUDENT_STATE_VERSION, STUDENT_STEPS } from './types';
+import { activeBalanceAccount, activeBookkeepingBlock, bookkeepingBlockState, studentAccountNet, accountVisibleAmountCount, T_ACCOUNTS } from './bookkeeping';
 import type {
   AmortizationTermState, BalanceField, ClassificationField, FieldState,
   IncomeField, PostingBlockState, ProceedsField, ScheduleField, SchedulePrerequisite,
@@ -117,11 +118,21 @@ function scheduleFields(state: StudentState): ScheduleField[] {
 }
 function incomeFields(): IncomeField[] { return ['nominalInterest', 'amortization', 'totalInterestExpense']; }
 function balanceFields(): BalanceField[] { return ['openingCarryingAmount', 'principalRepayment', 'amortization', 'closingCarryingAmount']; }
-function nextBookkeepingTerm(state: StudentState, result: StudentCaseResult): number | undefined {
-  return result.actual2026Terms.map((row) => row.term).find((term) => !state.bookkeeping[term]?.amortization.approved);
-}
-function completeBookkeepingIfDone(state: StudentState, result: StudentCaseResult): void {
-  if (nextBookkeepingTerm(state, result) === undefined) completeStep(state);
+function allBalancesConsistent(state: StudentState): boolean {
+  const result = state.caseResult;
+  if (!result.accountBalances || activeBookkeepingBlock(state)) return false;
+  if (T_ACCOUNTS.some(({ number }) => !result.accountBalances?.some((entry) => entry.account === number)
+    && !studentAccountNet(state, number).isZero())) return false;
+  if (result.accountBalances.some((expected) => {
+    const net = studentAccountNet(state, expected.account);
+    if (expected.status === 'noBalance') return !net.isZero();
+    return !net.abs().eq(expected.amount) || (net.isNegative() ? 'K' : 'D') !== expected.side
+      || !state.completion.balances[expected.account]?.approved;
+  })) return false;
+  const checks = evaluateFinalChecks(result.input, result.contract.rows, result.incomeSchedule,
+    result.classification, result.postingEvents, result.accountBalances);
+  state.completion.checks = checks;
+  return Object.values(checks).every(Boolean);
 }
 function allowed(state: StudentState, step: StudentStep): boolean { return canEditStep(state, step); }
 
@@ -322,21 +333,29 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       const next = copy(state); next.amortization.remainingCalculated = true; completeStep(next); return next;
     }
     case 'setBookkeepingBlock': {
-      if (!allowed(state, 'yearBookkeeping')) return state;
-      const result = calculatedResult(state);
-      if (nextBookkeepingTerm(state, result) !== action.term || !state.bookkeeping[action.term] || state.bookkeeping[action.term][action.block].approved || (action.block === 'amortization' && !state.bookkeeping[action.term].payment.approved)) return state;
-      const next = copy(state); const target = next.bookkeeping[action.term]![action.block];
-      target.lines = action.lines.map((line) => ({ ...line })); target.errors = []; target.accountStatuses = []; return next;
+      const active = activeBookkeepingBlock(state);
+      return active?.kind === action.block && active.term === action.term
+        ? applyStudentAction(state, { type: 'setPostingBlockLines', number: active.number, lines: action.lines }) : state;
     }
     case 'checkBookkeepingBlock': {
+      const active = activeBookkeepingBlock(state);
+      return active?.kind === action.block && active.term === action.term
+        ? applyStudentAction(state, { type: 'checkPostingBlock', number: active.number }) : state;
+    }
+    case 'setPostingBlockLines': {
       if (!allowed(state, 'yearBookkeeping')) return state;
-      const result = calculatedResult(state);
-      if (nextBookkeepingTerm(state, result) !== action.term || !state.bookkeeping[action.term] || state.bookkeeping[action.term][action.block].approved || (action.block === 'amortization' && !state.bookkeeping[action.term].payment.approved)) return state;
-      const event = result.postingEvents.find((entry) => entry.kind === action.block && entry.term === action.term);
-      if (!event) return state;
-      const next = copy(state); const target = next.bookkeeping[action.term]![action.block];
-      storeBlockCheck(target, validatePostingBlock(target.lines, event.movements));
-      if (action.block === 'amortization' && target.approved) completeBookkeepingIfDone(next, result);
+      const active = activeBookkeepingBlock(state);
+      if (!active || active.number !== action.number || active.expected.length === 0) return state;
+      const next = copy(state); const target = bookkeepingBlockState(next, active);
+      target.lines = action.lines.map((line) => ({ ...line })); target.errors = []; target.accountStatuses = [];
+      return next;
+    }
+    case 'checkPostingBlock': {
+      if (!allowed(state, 'yearBookkeeping')) return state;
+      const active = activeBookkeepingBlock(state);
+      if (!active || active.number !== action.number || active.expected.length === 0) return state;
+      const next = copy(state); const target = bookkeepingBlockState(next, active);
+      storeBlockCheck(target, validatePostingBlock(target.lines, active.expected));
       return next;
     }
     case 'editClassificationField': {
@@ -384,30 +403,51 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
       return state;
     }
     case 'setReclassificationBlock': {
-      return state;
+      const active = activeBookkeepingBlock(state);
+      return active?.kind === 'reclassification' ? applyStudentAction(state,
+        { type: 'setPostingBlockLines', number: active.number, lines: action.lines }) : state;
     }
     case 'checkReclassification': {
-      return state;
+      const active = activeBookkeepingBlock(state);
+      return active?.kind === 'reclassification' ? applyStudentAction(state,
+        { type: 'checkPostingBlock', number: active.number }) : state;
     }
     case 'setReclassificationAnswer': {
-      return state;
+      const active = activeBookkeepingBlock(state);
+      if (!allowed(state, 'yearBookkeeping') || active?.kind !== 'reclassification' || active.expected.length !== 0) return state;
+      const next = copy(state); next.classification.reclassificationAnswer = action.answer;
+      next.classification.answerErrorCode = null; return next;
     }
     case 'checkReclassificationAnswer': {
-      return state;
+      const active = activeBookkeepingBlock(state);
+      if (!allowed(state, 'yearBookkeeping') || active?.kind !== 'reclassification' || active.expected.length !== 0) return state;
+      const next = copy(state);
+      if (next.classification.reclassificationAnswer === 'no') next.classification.reclassification.approved = true;
+      else next.classification.answerErrorCode = 'WRONG_RESULT';
+      return next;
     }
     case 'editFinalBalance': {
-      if (!allowed(state, 'completion') || !state.completion.balances[action.account] || state.completion.balances[action.account]?.approved) return state;
+      if (!allowed(state, 'yearBookkeeping') || activeBalanceAccount(state) !== action.account) return state;
       const next = copy(state); const target = next.completion.balances[action.account]!;
       if (action.formula !== undefined) target.raw = action.formula;
       if (action.side !== undefined) target.side = action.side;
       target.errorCode = null; return next;
     }
     case 'checkFinalBalance': {
-      if (!allowed(state, 'completion') || !state.completion.balances[action.account] || state.completion.balances[action.account]?.approved) return state;
+      if (!allowed(state, 'yearBookkeeping') || activeBalanceAccount(state) !== action.account) return state;
       const expected = calculatedResult(state).accountBalances?.find((balance) => balance.account === action.account);
       if (!expected || expected.status === 'noBalance') return state;
+      const net = studentAccountNet(state, action.account);
+      if (!net.abs().eq(expected.amount) || (net.isNegative() ? 'K' : 'D') !== expected.side) return state;
       const next = copy(state); const target = next.completion.balances[action.account]!;
-      storeCheck(target, validateFinalBalance(target.raw, target.side, expected)); return next;
+      const count = accountVisibleAmountCount(state, action.account);
+      const validation = count === 1
+        ? validateAmount(target.raw, { expected: net.abs(), requirePositive: true })
+        : validateFinalBalance(target.raw, target.side, expected);
+      storeCheck(target, validation.correct && target.side !== expected.side
+        ? { correct: false, errorCode: 'WRONG_DEBIT_CREDIT_SIDE', feedback: feedbackFor('WRONG_DEBIT_CREDIT_SIDE') } : validation);
+      if (target.approved && !activeBalanceAccount(next) && allBalancesConsistent(next)) completeStep(next);
+      return next;
     }
     case 'runFinalChecks': {
       if (!allowed(state, 'completion') || Object.values(state.completion.balances).some((entry) => !entry.approved)) return state;

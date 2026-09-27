@@ -7,10 +7,9 @@ import { EffectiveInterestStep } from './EffectiveInterestStep';
 import { AmortizationStep } from './AmortizationStep';
 import { BookkeepingStep } from './BookkeepingStep';
 import { ClassificationStep } from './ClassificationStep';
-import { CompletionStep } from './CompletionStep';
 
 export function StepShell({ state, onAction }: { state: StudentState; onAction(action: StudentAction): void }) {
-  const step = state.viewingStep;
+  const step = state.viewingStep === 'completion' ? 'yearBookkeeping' : state.viewingStep;
   const copy = STEP_COPY[step];
   const readOnly = !canEditStep(state, step);
   const historical = state.viewingStep !== state.currentStep;
@@ -20,10 +19,10 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
     && state.completedSteps.includes(step) && nextStep !== undefined;
   return (
     <section className="step-shell card" aria-labelledby="step-heading">
-      {step !== 'proceeds' && step !== 'contractSchedule' && step !== 'effectiveInterest' && step !== 'amortizedCost' && step !== 'classification' && <div className="step-heading">
+      {step !== 'proceeds' && step !== 'contractSchedule' && step !== 'effectiveInterest' && step !== 'amortizedCost' && step !== 'classification' && step !== 'yearBookkeeping' && <div className="step-heading">
         <div className="step-number-large" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
         <div>
-          <p className="eyebrow">Trin {copy.number} af 8</p>
+          <p className="eyebrow">Trin {copy.number} af {STUDENT_STEPS.length}</p>
           <h2 id="step-heading">{copy.title}</h2>
           <p>{copy.description}</p>
         </div>
@@ -36,7 +35,6 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
         : step === 'amortizedCost' ? <AmortizationStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'yearBookkeeping' ? <BookkeepingStep state={state} onAction={onAction} readOnly={readOnly} />
         : step === 'classification' ? <ClassificationStep state={state} onAction={onAction} readOnly={readOnly} />
-        : step === 'completion' ? <CompletionStep state={state} onAction={onAction} readOnly={readOnly} />
         : <div className="work-area table-scroll" role="group" aria-label={`Arbejdsområde for ${copy.title}`}>
           <div className="work-area-symbol" aria-hidden="true">{String(copy.number).padStart(2, '0')}</div>
           <div>
@@ -44,7 +42,7 @@ export function StepShell({ state, onAction }: { state: StudentState; onAction(a
             <p>Her får du plads til beregninger og bogføring.</p>
           </div>
         </div>}
-      {canContinue && step !== 'proceeds' && step !== 'contractSchedule' && step !== 'effectiveInterest' && step !== 'amortizedCost' && step !== 'classification' && <div className="step-continue"><span>Trinnet er godkendt. Du vælger selv, hvornår du fortsætter.</span><button className="button button-primary" type="button" onClick={() => onAction({ type: 'continueToNextStep' })}>Fortsæt til {STEP_COPY[nextStep].title}</button></div>}
+      {canContinue && step !== 'proceeds' && step !== 'contractSchedule' && step !== 'effectiveInterest' && step !== 'amortizedCost' && step !== 'classification' && step !== 'yearBookkeeping' && <div className="step-continue"><span>Trinnet er godkendt. Du vælger selv, hvornår du fortsætter.</span><button className="button button-primary" type="button" onClick={() => onAction({ type: 'continueToNextStep' })}>Fortsæt til {STEP_COPY[nextStep].title}</button></div>}
     </section>
   );
 }

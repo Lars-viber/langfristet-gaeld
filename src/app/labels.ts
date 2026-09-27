@@ -33,11 +33,11 @@ export const STEP_COPY: Record<StudentStep, { number: number; title: string; des
     description: 'Her fordeler du gælden i en kortfristet og en langfristet del.',
   },
   completion: {
-    number: 7, title: 'Slutsaldi',
-    description: 'Her beregner du slutsaldi og gennemfører kontrollerne.',
+    number: 6, title: 'Bogføring',
+    description: 'Intern state for saldoarbejdet i Bogføring.',
   },
   finalOverview: {
-    number: 8, title: 'Afslutning',
+    number: 7, title: 'Afslutning',
     description: 'Her samles opgaven og afsluttes.',
   },
   initialRecognition: {
