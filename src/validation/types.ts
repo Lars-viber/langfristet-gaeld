@@ -7,7 +7,7 @@ export type ValidationErrorCode = FormulaErrorCode
   | 'INVALID_AMOUNT' | 'INVALID_SIGN' | 'WRONG_DEBIT_CREDIT_SIDE'
   | 'IRRELEVANT_ACCOUNT' | 'UNBALANCED_POSTING_BLOCK' | 'WRONG_NET_MOVEMENT';
 
-export type FeedbackContext = 'default' | 'brokerage';
+export type FeedbackContext = 'default' | 'brokerage' | 'classificationSum';
 export type ValidationResult =
   | { correct: true; errorCode: null; feedback: null; value?: Decimal }
   | { correct: false; errorCode: ValidationErrorCode; feedback: string; value?: Decimal };

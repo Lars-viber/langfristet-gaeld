@@ -6,9 +6,11 @@ import { ClassificationStep } from '../../src/components/ClassificationStep';
 import { CompletionStep } from '../../src/components/CompletionStep';
 import { calculateLoan } from '../../src/domain';
 import { createMemorySessionStorage, deserializeStudentSession, loadStudentSession, saveStudentSession, serializeStudentSession } from '../../src/persistence';
-import { STUDENT_STEPS, applyStudentAction, classificationStage, createStudentState } from '../../src/student';
+import { STUDENT_STEPS, applyStudentAction, classificationRepaymentCount, classificationStage, createStudentState } from '../../src/student';
 import type { StudentAction, StudentState } from '../../src/student';
 import { r1 } from '../fixtures/r1';
+import { r3 } from '../fixtures/r3';
+import { r4 } from '../fixtures/r4';
 import { r6 } from '../fixtures/r6';
 import type { GoldenFixture } from '../fixtures/types';
 
@@ -32,7 +34,8 @@ function throughDistribution(state: StudentState): StudentState {
     state = take(state, { type: 'setShortTermAnswer', answer: 'no' });
     state = take(state, { type: 'checkShortTermAnswer' });
   } else {
-    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(expected.shortTerm) });
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: classificationRepaymentCount(state) === 1
+      ? dk(expected.shortTerm.toFixed(2)) : formula(expected.shortTerm) });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
   }
   state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(expected.longTerm) });
@@ -86,19 +89,22 @@ describe('L8D classification and completion', () => {
     expect(rows.every((row) => row.date > '2026-12-31' && row.date <= '2027-12-31')).toBe(true);
   });
 
-  it('requires positive manual formulas in sequence and completes without navigating', () => {
+  it('accepts one direct positive repayment in sequence and completes without navigating', () => {
     let state = atClassification(r1);
     const expected = calculateLoan(r1.input).classification.shortTerm;
+    expect(classificationRepaymentCount(state)).toBe(1);
+    expect(renderClassification(state)).toContain('placeholder="Indtast beløb"');
     expect(take(state, { type: 'editClassificationField', field: 'longTerm', raw: '=1+1' })).toBe(state);
-    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: dk(expected.toFixed(2)) });
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: '1600000' });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
-    expect(state.classification.fields.shortTerm?.errorCode).toBe('MISSING_EQUALS');
-    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: `=-${dk(expected.toFixed(2))}+0` });
+    expect(state.classification.fields.shortTerm?.errorCode).toBe('WRONG_RESULT');
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: `-${dk(expected.toFixed(2))}` });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
     expect(renderClassification(state)).toContain('Fradraget vises allerede med');
-    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(expected) });
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: dk(expected.toFixed(2)) });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
     expect(classificationStage(state)).toBe('longTerm');
+    expect(state.classification.fields.shortTerm?.raw).toBe(dk(expected.toFixed(2)));
     const long = state.caseResult.classification.longTerm;
     state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: dk(long.toFixed(2)) });
     state = take(state, { type: 'checkClassificationField', field: 'longTerm' });
@@ -111,6 +117,58 @@ describe('L8D classification and completion', () => {
     expect(renderClassification(state)).toContain('Fortsæt til Bogføring');
     expect(take(state, { type: 'setReclassificationBlock', lines: [] })).toBe(state);
     expect(state.caseResult.accountBalances).toBeNull();
+  });
+
+  it('requires a real sum for two or more 2027 repayments and explains a bare answer', () => {
+    let state = atClassification(r3);
+    const expected = state.caseResult.classification.shortTerm;
+    const rows = state.caseResult.contract.rows.filter((row) => row.date > '2026-12-31'
+      && row.date <= '2027-12-31' && row.principalRepayment.gt(0));
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    expect(classificationRepaymentCount(state)).toBe(rows.length);
+    expect(renderClassification(state)).toContain('placeholder="Beregn et positivt beløb med ="');
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: dk(expected.toFixed(2)) });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
+    expect(state.classification.fields.shortTerm?.approved).toBe(false);
+    expect(renderClassification(state)).toContain('Vis beregningen ved at lægge de relevante afdrag sammen.');
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: `=${dk(expected.toFixed(2))}` });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
+    expect(state.classification.fields.shortTerm?.errorCode).toBe('NO_ACTUAL_OPERATION');
+    expect(renderClassification(state)).toContain('Vis beregningen ved at lægge de relevante afdrag sammen.');
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: `=${rows.map((row) => dk(row.principalRepayment.toFixed(2))).join('+')}` });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
+    expect(classificationStage(state)).toBe('longTerm');
+    state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(state.caseResult.classification.longTerm) });
+    state = take(state, { type: 'checkClassificationField', field: 'longTerm' });
+    expect(state.completedSteps).toContain('classification');
+  });
+
+  it('transfers the single 1.625.000,00 serial repayment without arithmetic', () => {
+    const input = { ...r4.input, nominalPrincipal: '6500000.00', years: 4 as const, paymentsPerYear: 1 as const };
+    const initial = createStudentState({ generatorVersion: '1.0.0', seed: 91,
+      loanType: 'serial', attempts: 1, caseInput: input });
+    let state: StudentState = { ...initial, currentStep: 'classification', viewingStep: 'classification',
+      completedSteps: [...STUDENT_STEPS.slice(0, 4)] };
+    expect(classificationRepaymentCount(state)).toBe(1);
+    expect(state.caseResult.contract.rows.filter((row) => row.date > '2026-12-31' && row.date <= '2027-12-31')
+      .map((row) => row.principalRepayment.toFixed(2))).toEqual(['1625000.00']);
+    expect(renderClassification(state)).toContain('placeholder="Indtast beløb"');
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: '1625000' });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
+    expect(state.classification.fields.shortTerm).toMatchObject({ raw: '1625000', approved: true });
+    expect(classificationStage(state)).toBe('longTerm');
+  });
+
+  it('restores a directly entered short-term amount in v2', () => {
+    let state = atClassification(r1);
+    const raw = dk(state.caseResult.classification.shortTerm.toFixed(2));
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw });
+    state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
+    const restored = deserializeStudentSession(serializeStudentSession(state));
+    expect(restored.status).toBe('restored');
+    if (restored.status !== 'restored') throw new Error('Restore failed');
+    expect(restored.state.classification.fields.shortTerm).toMatchObject({ raw, approved: true });
+    expect(renderClassification({ ...restored.state, currentStep: 'yearBookkeeping', viewingStep: 'classification' })).toContain(`value="${raw}"`);
   });
 
   it('continues explicitly to bookkeeping and returns from read-only history', () => {

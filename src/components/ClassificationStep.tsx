@@ -1,4 +1,4 @@
-import { classificationStage } from '../student';
+import { classificationRepaymentCount, classificationStage } from '../student';
 import type { StudentAction, StudentState } from '../student/types';
 import { ValidationMessage } from './ValidationMessage';
 
@@ -14,7 +14,8 @@ export function ClassificationStep({ state, onAction, readOnly }: {
   const stage = classificationStage(state);
   const historical = state.viewingStep !== state.currentStep;
   const model = state.caseResult.classification;
-  const zeroShortTerm = model.shortTerm.isZero();
+  const repaymentCount = classificationRepaymentCount(state);
+  const zeroShortTerm = repaymentCount === 0;
   const short = state.classification.fields.shortTerm;
   const long = state.classification.fields.longTerm;
   const canContinue = state.completedSteps.includes('classification') && !readOnly && !historical;
@@ -66,14 +67,14 @@ export function ClassificationStep({ state, onAction, readOnly }: {
               </div>}
           </div> : <div className="classification-amount-cell">
             <input id="classification-shortTerm" aria-label="Kortfristet del" type="text" inputMode="decimal" autoComplete="off" spellCheck={false}
-              value={short?.raw ?? ''} placeholder="Beregn et positivt beløb med =" readOnly={readOnly || Boolean(short?.approved)}
+              value={short?.raw ?? ''} placeholder={repaymentCount === 1 ? 'Indtast beløb' : 'Beregn et positivt beløb med ='} readOnly={readOnly || Boolean(short?.approved)}
               aria-invalid={short?.errorCode ? true : undefined}
               onChange={(event) => onAction({ type: 'editClassificationField', field: 'shortTerm', raw: event.target.value })} />
             {!readOnly && !short?.approved && <button className="button button-secondary" type="button"
               onClick={() => onAction({ type: 'checkClassificationField', field: 'shortTerm' })}>Kontrollér</button>}
             {short?.approved && <span className="classification-approved" aria-label="Godkendt">✓</span>}
             {short?.approved && <strong className="classification-money">{money(model.shortTerm)} kr.</strong>}
-            <ValidationMessage code={short?.errorCode ?? null} id="classification-short-feedback" />
+            <ValidationMessage code={short?.errorCode ?? null} id="classification-short-feedback" context={repaymentCount > 1 ? 'classificationSum' : 'default'} />
           </div>}
         </div>
         <div className="classification-statement-row classification-long-row">

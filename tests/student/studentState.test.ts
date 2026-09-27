@@ -3,7 +3,7 @@ import { calculateLoan, lastManualTermValues } from '../../src/domain';
 import type { LoanResult, NetMovement } from '../../src/domain';
 import type { GeneratedLevel1Case } from '../../src/generator';
 import {
-  applyStudentAction, canEditStep, canViewStep, classificationStage, createStudentState,
+  applyStudentAction, canEditStep, canViewStep, classificationRepaymentCount, classificationStage, createStudentState,
   deriveCompletedSummary, deriveStudentView, scheduleRowStatus, cashFlowRowStatus,
   amortizationSubrowStatus, resetCurrentCase, startNewCase, stepStatus,
   STUDENT_STATE_VERSION,
@@ -124,7 +124,8 @@ function approveClassification(state: StudentState): StudentState {
     state = take(state, { type: 'setShortTermAnswer', answer: 'no' });
     state = take(state, { type: 'checkShortTermAnswer' });
   } else {
-    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(model.classification.shortTerm) });
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: classificationRepaymentCount(state) === 1
+      ? dk(model.classification.shortTerm.toFixed(2)) : formula(model.classification.shortTerm) });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
   }
   state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(model.classification.longTerm) });
@@ -385,7 +386,7 @@ describe('L5 student progression', () => {
   it('completes positive short-term classification without bookkeeping', () => {
     let state = atClassification(r1);
     const model = calculateLoan(r1.input);
-    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: formula(model.classification.shortTerm) });
+    state = take(state, { type: 'editClassificationField', field: 'shortTerm', raw: dk(model.classification.shortTerm.toFixed(2)) });
     state = take(state, { type: 'checkClassificationField', field: 'shortTerm' });
     expect(classificationStage(state)).toBe('longTerm');
     state = take(state, { type: 'editClassificationField', field: 'longTerm', raw: formula(model.classification.longTerm) });

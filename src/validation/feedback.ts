@@ -19,6 +19,8 @@ const messages: Record<ValidationErrorCode, string> = {
 };
 
 export function feedbackFor(code: ValidationErrorCode, context: FeedbackContext = 'default'): string {
+  if (context === 'classificationSum' && (code === 'MISSING_EQUALS' || code === 'NO_ACTUAL_OPERATION'))
+    return 'Vis beregningen ved at lægge de relevante afdrag sammen.';
   return code === 'WRONG_RESULT' && context === 'brokerage'
     ? 'Husk, at kurtage beregnes af kursværdien.' : messages[code];
 }

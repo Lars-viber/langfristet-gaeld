@@ -71,6 +71,10 @@ export function classificationStage(state: StudentState): 'shortTerm' | 'longTer
   if (!c.fields.longTerm?.approved) return 'longTerm';
   return 'done';
 }
+export function classificationRepaymentCount(state: StudentState): number {
+  return state.caseResult.contract.rows.filter((row) => row.date > '2026-12-31'
+    && row.date <= '2027-12-31' && row.principalRepayment.gt(0)).length;
+}
 export function deriveStudentView(state: StudentState) {
   const activeAmortizationTerm = manualTerms(state.generatedCase.loanType, state.caseResult.contract.rows.length)
     .find((term) => !state.amortization.terms[term]?.approved) ?? null;

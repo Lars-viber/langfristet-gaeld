@@ -9,7 +9,7 @@ import {
 import type { StudentPostingLine, ValidationResult } from '../validation';
 import {
   amortizationIncomeFieldReady, amortizationSubrowStatus, canCalculateAnnuityPayment, canEditStep, canViewStep, cashFlowRowStatus,
-  classificationStage, manualTerms, prerequisitesApproved, scheduleRowStatus,
+  classificationRepaymentCount, classificationStage, manualTerms, prerequisitesApproved, scheduleRowStatus,
 } from './selectors';
 import { STUDENT_STATE_VERSION, STUDENT_STEPS } from './types';
 import type {
@@ -352,7 +352,10 @@ export function applyStudentAction(state: StudentState, action: StudentAction): 
         (action.field === 'shortTerm' && state.caseResult.classification.shortTerm.isZero())) return state;
       const next = copy(state); const target = next.classification.fields[action.field] ??= field();
       const expected = calculatedResult(state).classification[action.field];
-      storeCheck(target, validateManualCalculation(target.raw, { expected, requirePositive: true }));
+      storeCheck(target, action.field === 'shortTerm' && classificationRepaymentCount(state) === 1
+        ? validateAmount(target.raw, { expected, requirePositive: true })
+        : validateManualCalculation(target.raw, { expected, requirePositive: true,
+          feedbackContext: action.field === 'shortTerm' ? 'classificationSum' : 'default' }));
       if (action.field === 'longTerm' && target.approved && next.classification.fields.shortTerm?.approved &&
         calculatedResult(state).classification.shortTerm.plus(expected).eq(calculatedResult(state).classification.carryingAmount)) completeStep(next);
       return next;
