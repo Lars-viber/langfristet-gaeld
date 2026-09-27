@@ -1,6 +1,6 @@
 # Langfristet gæld – Niveau 1
 
-En browserbaseret undervisningsapp til træning i langfristede gældsforpligtelser. Version 1.0.0 dækker Niveau 1-forløbet fra valg af finansiering til afsluttende kontrol af posteringer og saldi.
+En browserbaseret undervisningsapp til træning i langfristede gældsforpligtelser. Version 1.0.1 dækker Niveau 1-forløbet fra valg af finansiering til afsluttende kontrol af posteringer og saldi.
 
 ## Indeholder
 
@@ -42,4 +42,4 @@ Niveau 1 følger den frosne v1.0-specifikation og tilhørende kontrakter:
 
 ## Release
 
-Aktuel version: `1.0.0`.
+Aktuel version: `1.0.1`.
